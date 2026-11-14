@@ -17,8 +17,8 @@
           Palmerston North
         </span>
       </a>
-      <div class="text-xs text-slate-400">
-        Order direct • <span class="text-emerald-400 font-medium">Zero commission fees</span>
+      <div class="flex items-center gap-3 text-xs text-slate-400">
+        <span>Order direct • <span class="text-emerald-400 font-medium">Zero commission fees</span></span>
       </div>
     </div>
   </header>
@@ -34,7 +34,7 @@
 
     <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
       <input id="searchInput" oninput="applyFilters()" type="text"
-        placeholder="Search restaurant, cuisine, or street (e.g., Broadway, Thai, Cafe)..."
+        placeholder="Search restaurant, cuisine, or street (e.g., Main Street, Thai, Bakery)..."
         class="sm:col-span-6 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" />
 
       <select id="serviceFilter" onchange="applyFilters()"
@@ -57,9 +57,9 @@
         class="text-xs px-3.5 py-1.5 rounded-full border border-slate-700 bg-slate-900 text-slate-300 hover:border-emerald-500 transition">
         🟢 Open Now
       </button>
-      <button id="directOrderBtn" onclick="toggleDirectOrder()"
-        class="text-xs px-3.5 py-1.5 rounded-full border border-slate-700 bg-slate-900 text-slate-300 hover:border-emerald-500 transition">
-        🌐 Has Direct Website
+      <button id="partnersOnlyBtn" onclick="togglePartnersOnly()"
+        class="text-xs px-3.5 py-1.5 rounded-full border border-slate-700 bg-slate-900 text-slate-300 hover:border-amber-500 transition">
+        ⭐ Direct Partners (Starter &amp; Pro)
       </button>
       <span id="resultCount" class="text-xs text-slate-400 ml-auto">Loading eateries...</span>
     </div>
@@ -105,7 +105,9 @@
 
     let allListings = [];
     let filterOpenNow = false;
-    let filterDirectOrder = false;
+    let filterPartnersOnly = false;
+
+    const tierRank = { pro: 0, starter: 1, free: 2 };
 
     function isCurrentlyOpen(hours) {
       if (!hours) return false;
@@ -139,9 +141,11 @@
           .map(d => ({ id: d.id, ...d.data() }))
           .filter(item => !item.permanentlyClosed);
 
+        // Sort: Pro -> Starter -> Free, then alphabetically
         allListings.sort((a, b) => {
-          if (a.tier === "pro" && b.tier !== "pro") return -1;
-          if (a.tier !== "pro" && b.tier === "pro") return 1;
+          const rankA = tierRank[a.tier || "free"] ?? 2;
+          const rankB = tierRank[b.tier || "free"] ?? 2;
+          if (rankA !== rankB) return rankA - rankB;
           return (a.name || "").localeCompare(b.name || "");
         });
 
@@ -177,12 +181,12 @@
       window.applyFilters();
     };
 
-    window.toggleDirectOrder = () => {
-      filterDirectOrder = !filterDirectOrder;
-      const btn = document.getElementById("directOrderBtn");
-      btn.classList.toggle("border-emerald-500", filterDirectOrder);
-      btn.classList.toggle("bg-emerald-500/10", filterDirectOrder);
-      btn.classList.toggle("text-emerald-300", filterDirectOrder);
+    window.togglePartnersOnly = () => {
+      filterPartnersOnly = !filterPartnersOnly;
+      const btn = document.getElementById("partnersOnlyBtn");
+      btn.classList.toggle("border-amber-500", filterPartnersOnly);
+      btn.classList.toggle("bg-amber-500/10", filterPartnersOnly);
+      btn.classList.toggle("text-amber-300", filterPartnersOnly);
       window.applyFilters();
     };
 
@@ -200,7 +204,9 @@
         if (service !== "all" && !(item.tags?.services || []).includes(service)) return false;
         if (category !== "all" && !(item.tags?.cuisine || []).includes(category)) return false;
         if (filterOpenNow && !isCurrentlyOpen(item.operatingHours)) return false;
-        if (filterDirectOrder && !item.directOrderUrl) return false;
+
+        const tier = item.tier || "free";
+        if (filterPartnersOnly && tier === "free") return false;
 
         return true;
       });
@@ -218,17 +224,76 @@
 
       grid.innerHTML = filtered.map(item => {
         const open = isCurrentlyOpen(item.operatingHours);
-        const isPro = item.tier === "pro";
+        const tier = item.tier || "free";
+        const isPro = tier === "pro";
+        const isStarter = tier === "starter";
         const cuisines = (item.tags?.cuisine || []).slice(0, 3);
         const services = item.tags?.services || [];
         const cleanPhone = (item.phone || "").replace(/\s+/g, "");
 
+        let badgeHtml = '<span class="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-500">Free</span>';
+        let borderClass = 'border-slate-800';
+        if (isPro) {
+          badgeHtml = '<span class="shrink-0 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">★ Featured Pro</span>';
+          borderClass = 'border-amber-500/50 shadow-lg shadow-amber-500/5';
+        } else if (isStarter) {
+          badgeHtml = '<span class="shrink-0 text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30">✓ Verified</span>';
+          borderClass = 'border-sky-500/30';
+        }
+
+        let actionsHtml = "";
+        if (isPro) {
+          actionsHtml = `
+            ${item.directOrderUrl ? `
+              <a href="${item.directOrderUrl.startsWith('http') ? item.directOrderUrl : 'https://' + item.directOrderUrl}"
+                target="_blank" rel="noopener"
+                class="flex-1 text-center bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs py-2.5 px-3 rounded-xl transition">
+                Order / Website ↗
+              </a>
+            ` : ''}
+            ${cleanPhone ? `
+              <a href="tel:${cleanPhone}"
+                class="flex-1 text-center bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs py-2.5 px-3 rounded-xl transition">
+                📞 Call
+              </a>
+            ` : ''}
+            <a href="${item.googleReviewUrl || '#'}" target="_blank" rel="noopener"
+              class="text-center bg-slate-800/60 hover:bg-slate-800 text-slate-300 text-xs py-2.5 px-3 rounded-xl transition">
+              Map ↗
+            </a>
+          `;
+        } else if (isStarter) {
+          actionsHtml = `
+            ${cleanPhone ? `
+              <a href="tel:${cleanPhone}"
+                class="flex-1 text-center bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 font-semibold text-xs py-2.5 px-3 rounded-xl transition">
+                📞 Call Direct
+              </a>
+            ` : ''}
+            <a href="${item.googleReviewUrl || '#'}" target="_blank" rel="noopener"
+              class="flex-1 text-center bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-2.5 px-3 rounded-xl transition">
+              Map ↗
+            </a>
+          `;
+        } else {
+          actionsHtml = `
+            <a href="${item.googleReviewUrl || '#'}" target="_blank" rel="noopener"
+              class="flex-1 text-center bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-2.5 px-3 rounded-xl transition">
+              View on Map ↗
+            </a>
+            <a href="mailto:hello@eatsdirect.co.nz?subject=${encodeURIComponent('Claim Listing: ' + item.name)}"
+              class="text-center bg-slate-800/50 hover:bg-emerald-500/10 text-slate-400 hover:text-emerald-400 border border-slate-700/80 text-xs py-2.5 px-3 rounded-xl transition">
+              Claim Listing
+            </a>
+          `;
+        }
+
         return `
-          <article class="bg-slate-900 border ${isPro ? 'border-amber-500/50 shadow-lg shadow-amber-500/5' : 'border-slate-800'} rounded-2xl p-5 flex flex-col justify-between hover:border-slate-700 transition">
+          <article class="bg-slate-900 border ${borderClass} rounded-2xl p-5 flex flex-col justify-between hover:border-slate-700 transition">
             <div>
               <div class="flex items-start justify-between gap-2 mb-2">
                 <h2 class="text-lg font-bold text-white leading-snug">${item.name}</h2>
-                ${isPro ? '<span class="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">Featured</span>' : ''}
+                ${badgeHtml}
               </div>
 
               <p class="text-xs text-slate-400 mb-3">📍 ${item.address || "Palmerston North"}</p>
@@ -249,24 +314,7 @@
             </div>
 
             <div class="pt-3 border-t border-slate-800/80 flex flex-wrap gap-2">
-              ${item.directOrderUrl ? `
-                <a href="${item.directOrderUrl.startsWith('http') ? item.directOrderUrl : 'https://' + item.directOrderUrl}"
-                  target="_blank" rel="noopener"
-                  class="flex-1 text-center bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs py-2.5 px-3 rounded-xl transition">
-                  Order / Website ↗
-                </a>
-              ` : ''}
-              ${cleanPhone ? `
-                <a href="tel:${cleanPhone}"
-                  class="flex-1 text-center bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs py-2.5 px-3 rounded-xl transition">
-                  📞 Call
-                </a>
-              ` : ''}
-              <a href="${item.googleReviewUrl || '#'}" target="_blank" rel="noopener"
-                class="text-center bg-slate-800/60 hover:bg-slate-800 text-slate-300 text-xs py-2.5 px-3 rounded-xl transition"
-                title="View on Google Maps">
-                Map ↗
-              </a>
+              ${actionsHtml}
             </div>
           </article>
         `;
