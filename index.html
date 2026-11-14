@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EatsDirect — Palmerston North Restaurants, Cafes & Takeaways</title>
+  <title>EatsDirect NZ — Support Local Restaurants, Cafes, Takeaways &amp; Bakeries</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
@@ -13,7 +13,7 @@
     <div class="max-w-6xl mx-auto px-4 py-3.5 flex flex-wrap items-center justify-between gap-4">
       <a href="/" class="flex items-center gap-3">
         <img src="assets/images/edlogo.png" alt="EatsDirect" class="h-9 sm:h-10 w-auto object-contain" />
-        <span class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
+        <span id="headerCityBadge" class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
           Palmerston North
         </span>
       </a>
@@ -26,19 +26,25 @@
   <!-- Hero & Search -->
   <section class="max-w-6xl mx-auto px-4 pt-8 pb-6">
     <h1 class="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2">
-      Support Local Palmy Eateries Directly
+      Support Local <span id="heroCityTitle" class="text-emerald-400">Palmerston North</span> Eateries Directly
     </h1>
     <p class="text-slate-400 text-sm sm:text-base mb-6">
-      Browse <span id="heroCount" class="text-white font-semibold">167</span> restaurants, cafes &amp; takeaways across Palmerston North.
+      Browse <span id="heroCount" class="text-white font-semibold">14,400+</span> restaurants, cafes, takeaways, bakeries &amp; cake shops across New Zealand.
     </p>
 
     <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+      <select id="cityFilter" onchange="onCityChange()"
+        class="sm:col-span-3 bg-slate-900 border border-emerald-500/40 rounded-xl px-4 py-3 text-sm font-medium text-white focus:outline-none focus:border-emerald-500">
+        <option value="Palmerston North">Palmerston North</option>
+        <option value="all">All New Zealand</option>
+      </select>
+
       <input id="searchInput" oninput="applyFilters()" type="text"
-        placeholder="Search restaurant, cuisine, or street (e.g., Main Street, Thai, Bakery)..."
-        class="sm:col-span-6 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" />
+        placeholder="Search name, cuisine, or street..."
+        class="sm:col-span-5 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" />
 
       <select id="serviceFilter" onchange="applyFilters()"
-        class="sm:col-span-3 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+        class="sm:col-span-2 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
         <option value="all">All Services</option>
         <option value="Takeaway">Takeaway</option>
         <option value="Dine-In">Dine-In</option>
@@ -46,42 +52,45 @@
       </select>
 
       <select id="categoryFilter" onchange="applyFilters()"
-        class="sm:col-span-3 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+        class="sm:col-span-2 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
         <option value="all">All Categories</option>
       </select>
     </div>
 
     <!-- Quick Filter Pills -->
     <div class="flex flex-wrap items-center gap-2 mt-4">
-      <button id="openNowBtn" onclick="toggleOpenNow()"
-        class="text-xs px-3.5 py-1.5 rounded-full border border-slate-700 bg-slate-900 text-slate-300 hover:border-emerald-500 transition">
-        🟢 Open Now
-      </button>
       <button id="partnersOnlyBtn" onclick="togglePartnersOnly()"
         class="text-xs px-3.5 py-1.5 rounded-full border border-slate-700 bg-slate-900 text-slate-300 hover:border-amber-500 transition">
         ⭐ Direct Partners (Starter &amp; Pro)
       </button>
-      <span id="resultCount" class="text-xs text-slate-400 ml-auto">Loading eateries...</span>
+      <span id="resultCount" class="text-xs text-slate-400 ml-auto">Loading NZ directory...</span>
     </div>
   </section>
 
   <!-- Directory Grid -->
   <main class="max-w-6xl mx-auto px-4 pb-16">
     <div id="loadingState" class="text-center py-16 text-slate-400 text-sm">
-      Loading Palmerston North directory...
+      Loading New Zealand food directory...
     </div>
 
     <div id="emptyState" class="hidden text-center py-16 bg-slate-900/50 border border-slate-800 rounded-2xl">
       <p class="text-slate-300 font-medium">No matching eateries found</p>
-      <p class="text-slate-500 text-sm mt-1">Try clearing your search or switching filters.</p>
+      <p class="text-slate-500 text-sm mt-1">Try switching city, clearing search, or changing filters.</p>
     </div>
 
     <div id="cardsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+    <div id="loadMoreWrap" class="hidden text-center mt-8">
+      <button onclick="loadMore()"
+        class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm text-white font-medium px-6 py-3 rounded-xl transition">
+        Load More Eateries
+      </button>
+    </div>
   </main>
 
   <!-- Footer -->
   <footer class="border-t border-slate-900 py-8 text-center text-xs text-slate-500">
-    <p>&copy; 2026 EatsDirect NZ • Palmerston North, Manawatū-Whanganui</p>
+    <p>&copy; 2026 EatsDirect NZ • Aotearoa New Zealand Local Food Directory</p>
   </footer>
 
   <script type="module">
@@ -103,45 +112,74 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    const CACHE_KEY = "eatsdirect_nz_cache_v2";
+    const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+
     let allListings = [];
-    let filterOpenNow = false;
+    let currentFiltered = [];
+    let visibleCount = 36;
     let filterPartnersOnly = false;
 
     const tierRank = { pro: 0, starter: 1, free: 2 };
 
-    function isCurrentlyOpen(hours) {
-      if (!hours) return false;
-      const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-      const now = new Date();
-      const today = hours[days[now.getDay()]];
-      if (!today || today.closed) return false;
+    async function fetchMergedData() {
+      try {
+        const cachedRaw = localStorage.getItem(CACHE_KEY);
+        if (cachedRaw) {
+          const parsed = JSON.parse(cachedRaw);
+          if (Date.now() - parsed.ts < CACHE_TTL_MS && Array.isArray(parsed.data) && parsed.data.length > 100) {
+            return parsed.data;
+          }
+        }
+      } catch (_) {}
 
-      const currentMins = now.getHours() * 60 + now.getMinutes();
-      const [oh, om] = (today.open || "09:00").split(":").map(Number);
-      const [ch, cm] = (today.close || "21:00").split(":").map(Number);
-      const openMins = oh * 60 + om;
-      let closeMins = ch * 60 + cm;
-      if (closeMins <= openMins) closeMins += 1440;
+      let staticData = [];
+      try {
+        const res = await fetch("./assets/data/nz_eateries.json?v=" + Math.floor(Date.now() / 3600000));
+        if (res.ok) {
+          staticData = await res.json();
+        } else {
+          console.error("Failed to fetch nz_eateries.json, status:", res.status);
+        }
+      } catch (e) {
+        console.error("Error fetching nz_eateries.json:", e);
+      }
 
-      return currentMins >= openMins && currentMins <= closeMins;
-    }
+      const overridesMap = new Map();
+      try {
+        const snap = await getDocs(collection(db, "directory_listings"));
+        snap.forEach(d => {
+          overridesMap.set(d.id, { placeId: d.id, ...d.data() });
+        });
+      } catch (e) {
+        console.warn("Firestore overrides warning:", e);
+      }
 
-    function getTodayHoursText(hours) {
-      if (!hours) return "Hours unavailable";
-      const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-      const today = hours[days[new Date().getDay()]];
-      if (!today || today.closed) return "Closed today";
-      return `Today: ${today.open} – ${today.close}`;
+      const combinedMap = new Map();
+      staticData.forEach(item => {
+        const id = item.placeId || item.id;
+        combinedMap.set(id, item);
+      });
+      overridesMap.forEach((val, key) => {
+        const base = combinedMap.get(key) || {};
+        combinedMap.set(key, { ...base, ...val, placeId: key });
+      });
+
+      const finalData = Array.from(combinedMap.values()).filter(x => !x.permanentlyClosed);
+
+      if (staticData.length > 100) {
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: finalData }));
+        } catch (_) {}
+      }
+
+      return finalData;
     }
 
     async function init() {
       try {
-        const snap = await getDocs(collection(db, "directory_listings"));
-        allListings = snap.docs
-          .map(d => ({ id: d.id, ...d.data() }))
-          .filter(item => !item.permanentlyClosed);
+        allListings = await fetchMergedData();
 
-        // Sort: Pro -> Starter -> Free, then alphabetically
         allListings.sort((a, b) => {
           const rankA = tierRank[a.tier || "free"] ?? 2;
           const rankB = tierRank[b.tier || "free"] ?? 2;
@@ -149,35 +187,63 @@
           return (a.name || "").localeCompare(b.name || "");
         });
 
-        document.getElementById("heroCount").textContent = allListings.length;
+        document.getElementById("heroCount").textContent = allListings.length.toLocaleString();
+        populateCities();
         populateCategories();
         document.getElementById("loadingState").classList.add("hidden");
         window.applyFilters();
       } catch (err) {
-        document.getElementById("loadingState").textContent = "Failed to load listings: " + err.message;
+        document.getElementById("loadingState").textContent = "Failed to load directory: " + err.message;
       }
     }
 
-    function populateCategories() {
-      const catSet = new Set();
+    function populateCities() {
+      const counts = {};
       allListings.forEach(item => {
-        (item.tags?.cuisine || []).forEach(c => catSet.add(c));
+        if (!item.city) return;
+        counts[item.city] = (counts[item.city] || 0) + 1;
       });
-      const select = document.getElementById("categoryFilter");
-      Array.from(catSet).sort().forEach(cat => {
+      const select = document.getElementById("cityFilter");
+      select.innerHTML = `<option value="all">All New Zealand (${allListings.length.toLocaleString()})</option>`;
+
+      Object.keys(counts).sort().forEach(city => {
         const opt = document.createElement("option");
-        opt.value = cat;
-        opt.textContent = cat;
+        opt.value = city;
+        opt.textContent = `${city} (${counts[city]})`;
         select.appendChild(opt);
       });
+
+      if (counts["Palmerston North"]) {
+        select.value = "Palmerston North";
+      } else {
+        select.value = "all";
+      }
+      window.onCityChange();
     }
 
-    window.toggleOpenNow = () => {
-      filterOpenNow = !filterOpenNow;
-      const btn = document.getElementById("openNowBtn");
-      btn.classList.toggle("border-emerald-500", filterOpenNow);
-      btn.classList.toggle("bg-emerald-500/10", filterOpenNow);
-      btn.classList.toggle("text-emerald-300", filterOpenNow);
+    function populateCategories() {
+      const catCounts = {};
+      allListings.forEach(item => {
+        (item.tags?.cuisine || []).forEach(c => {
+          catCounts[c] = (catCounts[c] || 0) + 1;
+        });
+      });
+      const select = document.getElementById("categoryFilter");
+      Object.entries(catCounts)
+        .filter(([, count]) => count >= 5)
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .forEach(([cat]) => {
+          const opt = document.createElement("option");
+          opt.value = cat;
+          opt.textContent = cat;
+          select.appendChild(opt);
+        });
+    }
+
+    window.onCityChange = () => {
+      const city = document.getElementById("cityFilter").value;
+      document.getElementById("heroCityTitle").textContent = city === "all" ? "New Zealand" : city;
+      document.getElementById("headerCityBadge").textContent = city === "all" ? "New Zealand" : city;
       window.applyFilters();
     };
 
@@ -191,19 +257,24 @@
     };
 
     window.applyFilters = () => {
+      visibleCount = 36;
+      const city = document.getElementById("cityFilter").value;
       const q = document.getElementById("searchInput").value.toLowerCase().trim();
       const service = document.getElementById("serviceFilter").value;
       const category = document.getElementById("categoryFilter").value;
 
-      const filtered = allListings.filter(item => {
-        const nameMatch = (item.name || "").toLowerCase().includes(q);
-        const addrMatch = (item.address || "").toLowerCase().includes(q);
-        const cuisineMatch = (item.tags?.cuisine || []).some(c => c.toLowerCase().includes(q));
-        if (q && !nameMatch && !addrMatch && !cuisineMatch) return false;
+      currentFiltered = allListings.filter(item => {
+        if (city !== "all" && item.city !== city) return false;
+
+        if (q) {
+          const nameMatch = (item.name || "").toLowerCase().includes(q);
+          const addrMatch = (item.address || "").toLowerCase().includes(q);
+          const cuisineMatch = (item.tags?.cuisine || []).some(c => c.toLowerCase().includes(q));
+          if (!nameMatch && !addrMatch && !cuisineMatch) return false;
+        }
 
         if (service !== "all" && !(item.tags?.services || []).includes(service)) return false;
         if (category !== "all" && !(item.tags?.cuisine || []).includes(category)) return false;
-        if (filterOpenNow && !isCurrentlyOpen(item.operatingHours)) return false;
 
         const tier = item.tier || "free";
         if (filterPartnersOnly && tier === "free") return false;
@@ -211,19 +282,36 @@
         return true;
       });
 
-      document.getElementById("resultCount").textContent = `Showing ${filtered.length} of ${allListings.length} eateries`;
+      document.getElementById("resultCount").textContent =
+        `Showing ${Math.min(visibleCount, currentFiltered.length).toLocaleString()} of ${currentFiltered.length.toLocaleString()} eateries`;
+
+      renderCards();
+    };
+
+    window.loadMore = () => {
+      visibleCount += 36;
+      document.getElementById("resultCount").textContent =
+        `Showing ${Math.min(visibleCount, currentFiltered.length).toLocaleString()} of ${currentFiltered.length.toLocaleString()} eateries`;
+      renderCards();
+    };
+
+    function renderCards() {
       const grid = document.getElementById("cardsGrid");
       const empty = document.getElementById("emptyState");
+      const loadMoreWrap = document.getElementById("loadMoreWrap");
 
-      if (filtered.length === 0) {
+      if (currentFiltered.length === 0) {
         grid.innerHTML = "";
         empty.classList.remove("hidden");
+        loadMoreWrap.classList.add("hidden");
         return;
       }
       empty.classList.add("hidden");
 
-      grid.innerHTML = filtered.map(item => {
-        const open = isCurrentlyOpen(item.operatingHours);
+      const slice = currentFiltered.slice(0, visibleCount);
+      loadMoreWrap.classList.toggle("hidden", visibleCount >= currentFiltered.length);
+
+      grid.innerHTML = slice.map(item => {
         const tier = item.tier || "free";
         const isPro = tier === "pro";
         const isStarter = tier === "starter";
@@ -281,7 +369,7 @@
               class="flex-1 text-center bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-2.5 px-3 rounded-xl transition">
               View on Map ↗
             </a>
-            <a href="mailto:hello@eatsdirect.co.nz?subject=${encodeURIComponent('Claim Listing: ' + item.name)}"
+            <a href="mailto:hello@eatsdirect.co.nz?subject=${encodeURIComponent('Claim Listing: ' + item.name + ' (' + (item.city || 'NZ') + ')')}"
               class="text-center bg-slate-800/50 hover:bg-emerald-500/10 text-slate-400 hover:text-emerald-400 border border-slate-700/80 text-xs py-2.5 px-3 rounded-xl transition">
               Claim Listing
             </a>
@@ -296,20 +384,11 @@
                 ${badgeHtml}
               </div>
 
-              <p class="text-xs text-slate-400 mb-3">📍 ${item.address || "Palmerston North"}</p>
+              <p class="text-xs text-slate-400 mb-3">📍 ${item.address || item.city || "New Zealand"}</p>
 
-              <div class="flex flex-wrap gap-1.5 mb-3">
+              <div class="flex flex-wrap gap-1.5 mb-4">
                 ${cuisines.map(c => `<span class="text-[11px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300">${c}</span>`).join("")}
                 ${services.map(s => `<span class="text-[11px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400">${s}</span>`).join("")}
-              </div>
-
-              <div class="flex items-center gap-2 text-xs mb-4">
-                <span class="inline-flex items-center gap-1 ${open ? 'text-emerald-400' : 'text-slate-500'}">
-                  <span class="w-2 h-2 rounded-full ${open ? 'bg-emerald-400' : 'bg-slate-600'}"></span>
-                  ${open ? 'Open' : 'Closed'}
-                </span>
-                <span class="text-slate-600">•</span>
-                <span class="text-slate-400">${getTodayHoursText(item.operatingHours)}</span>
               </div>
             </div>
 
@@ -319,7 +398,7 @@
           </article>
         `;
       }).join("");
-    };
+    }
 
     init();
   </script>
