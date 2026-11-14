@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EatsDirect Admin — Palmerston North Directory</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+
+  <!-- PIN Gate -->
+  <div id="pinGate" class="fixed inset-0 bg-slate-950 flex items-center justify-center z-50 p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
+      <h1 class="text-2xl font-bold tracking-tight mb-1">
+        <span class="text-white">eats</span><span class="text-emerald-400">direct</span>
+        <span class="text-xs font-normal text-slate-400 block mt-1">Admin Control Panel</span>
+      </h1>
+      <p class="text-sm text-slate-400 mt-4 mb-5">Enter Admin PIN to unlock</p>
+      <input id="pinInput" type="password" maxlength="6" placeholder="••••"
+        class="w-full text-center text-2xl tracking-[0.5em] bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 focus:outline-none focus:border-emerald-500 mb-4" />
+      <button onclick="checkPin()"
+        class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold py-3 rounded-xl transition">
+        Unlock Panel
+      </button>
+      <p id="pinError" class="text-rose-400 text-xs mt-3 hidden">Incorrect PIN. Try again.</p>
+    </div>
+  </div>
+
+  <!-- Main Dashboard -->
+  <div id="dashboard" class="hidden max-w-6xl mx-auto p-6 space-y-6">
+    <header class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-5">
+      <div>
+        <h1 class="text-2xl font-bold"><span class="text-white">eats</span><span class="text-emerald-400">direct</span> Admin</h1>
+        <p class="text-xs text-slate-400">Project: <code class="text-emerald-400">eatsdirect-54ee0</code> • Palmerston North</p>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <button onclick="exportBackup()"
+          class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm px-4 py-2 rounded-xl transition">
+          ⬇ Export JSON Backup
+        </button>
+        <a href="/" target="_blank"
+          class="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-sm px-4 py-2 rounded-xl transition">
+          View Live Site ↗
+        </a>
+      </div>
+    </header>
+
+    <!-- Bulk JSON Importer -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+      <h2 class="text-lg font-semibold mb-1">Bulk Import / Clean Sync JSON</h2>
+      <p class="text-sm text-slate-400 mb-4">
+        Upload <code>palmy_eateries.json</code> from Colab. Records with <code>isManualEdited: true</code> or <code>isClaimed: true</code> are protected from overwrite.
+      </p>
+      <div class="flex flex-wrap items-center gap-4">
+        <input id="jsonFile" type="file" accept=".json"
+          class="text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-emerald-500 file:text-slate-950 hover:file:bg-emerald-400 cursor-pointer" />
+        <button id="uploadBtn" onclick="uploadJson()"
+          class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold px-5 py-2 rounded-xl text-sm transition">
+          Upload to Firestore
+        </button>
+      </div>
+      <div id="statusBox" class="mt-4 text-sm text-slate-300 bg-slate-950/70 border border-slate-800 rounded-xl p-3 hidden"></div>
+    </section>
+
+    <!-- Live Listings Table -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <h2 class="text-lg font-semibold">Directory Listings (<span id="totalCount">0</span>)</h2>
+        <input id="searchBox" oninput="renderTable()" type="text" placeholder="Search name or address..."
+          class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm w-full sm:w-72 focus:outline-none focus:border-emerald-500" />
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="text-xs uppercase text-slate-400 border-b border-slate-800">
+            <tr>
+              <th class="py-3 px-2">Name</th>
+              <th class="py-3 px-2">Address</th>
+              <th class="py-3 px-2">Category</th>
+              <th class="py-3 px-2">Tier</th>
+              <th class="py-3 px-2 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody" class="divide-y divide-slate-800/70"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+    import {
+      getFirestore, collection, doc, getDocs, updateDoc, deleteDoc, writeBatch
+    } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB7shytq1f9HM7tgvzsN3YuCkzTo19sp60",
+      authDomain: "eatsdirect-54ee0.firebaseapp.com",
+      projectId: "eatsdirect-54ee0",
+      storageBucket: "eatsdirect-54ee0.firebasestorage.app",
+      messagingSenderId: "549263633437",
+      appId: "1:549263633437:web:c3f1e75b479b3005822af4",
+      measurementId: "G-31N6FZHDPH"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const ADMIN_PIN = "1967";
+    let listingsCache = [];
+
+    window.checkPin = () => {
+      const val = document.getElementById("pinInput").value.trim();
+      if (val === ADMIN_PIN) {
+        document.getElementById("pinGate").classList.add("hidden");
+        document.getElementById("dashboard").classList.remove("hidden");
+        loadListings();
+      } else {
+        document.getElementById("pinError").classList.remove("hidden");
+      }
+    };
+
+    document.getElementById("pinInput").addEventListener("keyup", (e) => {
+      if (e.key === "Enter") window.checkPin();
+    });
+
+    async function loadListings() {
+      const snap = await getDocs(collection(db, "directory_listings"));
+      listingsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      listingsCache.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+      document.getElementById("totalCount").textContent = listingsCache.length;
+      renderTable();
+    }
+
+    window.renderTable = () => {
+      const q = document.getElementById("searchBox").value.toLowerCase();
+      const filtered = listingsCache.filter(item =>
+        (item.name || "").toLowerCase().includes(q) ||
+        (item.address || "").toLowerCase().includes(q)
+      );
+      const tbody = document.getElementById("tableBody");
+      tbody.innerHTML = filtered.map(item => `
+        <tr class="hover:bg-slate-800/40">
+          <td class="py-3 px-2 font-medium text-white">${item.name || "-"}</td>
+          <td class="py-3 px-2 text-slate-400">${item.address || "-"}</td>
+          <td class="py-3 px-2 text-slate-300">${(item.tags?.cuisine || []).join(", ")}</td>
+          <td class="py-3 px-2">
+            <span class="px-2 py-0.5 rounded-full text-xs ${item.tier === 'pro' ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-800 text-slate-400'}">
+              ${item.tier || 'free'}
+            </span>
+          </td>
+          <td class="py-3 px-2 text-right space-x-2">
+            <button onclick="togglePro('${item.id}', '${item.tier || 'free'}')"
+              class="text-xs px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-300 hover:bg-amber-500/20">
+              ${item.tier === 'pro' ? 'Set Free' : 'Upgrade Pro'}
+            </button>
+            <button onclick="removeListing('${item.id}', '${(item.name || '').replace(/'/g, "\\'")}')"
+              class="text-xs px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20">
+              Delete
+            </button>
+          </td>
+        </tr>
+      `).join("");
+    };
+
+    window.uploadJson = async () => {
+      const fileInput = document.getElementById("jsonFile");
+      const statusBox = document.getElementById("statusBox");
+      if (!fileInput.files.length) {
+        alert("Please select palmy_eateries.json first.");
+        return;
+      }
+
+      statusBox.classList.remove("hidden");
+      statusBox.textContent = "Reading JSON file...";
+
+      try {
+        const text = await fileInput.files[0].text();
+        const records = JSON.parse(text);
+        if (!Array.isArray(records)) throw new Error("JSON must be an array.");
+
+        const existingSnap = await getDocs(collection(db, "directory_listings"));
+        const protectedIds = new Set();
+        existingSnap.forEach(d => {
+          const data = d.data();
+          if (data.isManualEdited || data.isClaimed) protectedIds.add(d.id);
+        });
+
+        let batch = writeBatch(db);
+        let opCount = 0;
+        let imported = 0;
+        let skipped = 0;
+
+        for (const item of records) {
+          const docId = item.placeId || `osm_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+          if (protectedIds.has(docId)) {
+            skipped++;
+            continue;
+          }
+          const ref = doc(db, "directory_listings", docId);
+          batch.set(ref, { ...item, placeId: docId }, { merge: true });
+          opCount++;
+          imported++;
+
+          if (opCount === 400) {
+            await batch.commit();
+            batch = writeBatch(db);
+            opCount = 0;
+          }
+        }
+        if (opCount > 0) await batch.commit();
+
+        statusBox.textContent = `Done! Imported/updated ${imported} listings. Skipped ${skipped} manually edited/claimed listings.`;
+        await loadListings();
+      } catch (err) {
+        statusBox.textContent = "Error: " + err.message;
+      }
+    };
+
+    window.togglePro = async (id, currentTier) => {
+      const nextTier = currentTier === "pro" ? "free" : "pro";
+      await updateDoc(doc(db, "directory_listings", id), { tier: nextTier, isManualEdited: true });
+      await loadListings();
+    };
+
+    window.removeListing = async (id, name) => {
+      if (!confirm(`Delete "${name}" from directory?`)) return;
+      await deleteDoc(doc(db, "directory_listings", id));
+      await loadListings();
+    };
+
+    window.exportBackup = () => {
+      const blob = new Blob([JSON.stringify(listingsCache, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `eatsdirect_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+  </script>
+</body>
+</html>
