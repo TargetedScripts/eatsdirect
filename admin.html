@@ -37,12 +37,16 @@
         </div>
       </div>
       <div class="flex flex-wrap gap-3">
+        <button onclick="openModal()"
+          class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm px-4 py-2 rounded-xl transition">
+          + Add New Eatery
+        </button>
         <button onclick="exportBackup()"
           class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm px-4 py-2 rounded-xl transition">
           ⬇ Export JSON Backup
         </button>
         <a href="/" target="_blank"
-          class="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-sm px-4 py-2 rounded-xl transition">
+          class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-emerald-400 text-sm px-4 py-2 rounded-xl transition">
           View Live Site ↗
         </a>
       </div>
@@ -52,7 +56,7 @@
     <section class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
       <h2 class="text-lg font-semibold mb-1">Bulk Import / Clean Sync JSON</h2>
       <p class="text-sm text-slate-400 mb-4">
-        Upload <code>palmy_eateries.json</code> from Colab. Records with <code>isManualEdited: true</code> or <code>isClaimed: true</code> are protected from overwrite.
+        Upload <code>palmy_eateries.json</code>. Records with <code>isManualEdited: true</code> or <code>isClaimed: true</code> are protected from overwrite.
       </p>
       <div class="flex flex-wrap items-center gap-4">
         <input id="jsonFile" type="file" accept=".json"
@@ -69,8 +73,17 @@
     <section class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
       <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h2 class="text-lg font-semibold">Directory Listings (<span id="totalCount">0</span>)</h2>
-        <input id="searchBox" oninput="renderTable()" type="text" placeholder="Search name or address..."
-          class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm w-full sm:w-72 focus:outline-none focus:border-emerald-500" />
+        <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+          <select id="tierFilter" onchange="renderTable()"
+            class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+            <option value="all">All Tiers</option>
+            <option value="pro">Pro</option>
+            <option value="starter">Starter</option>
+            <option value="free">Free</option>
+          </select>
+          <input id="searchBox" oninput="renderTable()" type="text" placeholder="Search name or address..."
+            class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm w-full sm:w-64 focus:outline-none focus:border-emerald-500" />
+        </div>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-left text-sm">
@@ -79,7 +92,7 @@
               <th class="py-3 px-2">Name</th>
               <th class="py-3 px-2">Address</th>
               <th class="py-3 px-2">Category</th>
-              <th class="py-3 px-2">Tier</th>
+              <th class="py-3 px-2">Stripe Tier</th>
               <th class="py-3 px-2 text-right">Actions</th>
             </tr>
           </thead>
@@ -89,10 +102,73 @@
     </section>
   </div>
 
+  <!-- Add / Edit Modal -->
+  <div id="editModal" class="fixed inset-0 bg-black/75 hidden items-center justify-center z-50 p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-lg w-full space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 id="modalTitle" class="text-lg font-bold text-white">Add New Eatery</h3>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-white text-xl">&times;</button>
+      </div>
+
+      <input type="hidden" id="editDocId" />
+
+      <div class="space-y-3 text-sm">
+        <div>
+          <label class="block text-slate-400 text-xs mb-1">Business Name *</label>
+          <input id="fName" type="text" placeholder="e.g., Wildflour Kitchen"
+            class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+        </div>
+        <div>
+          <label class="block text-slate-400 text-xs mb-1">Street Address *</label>
+          <input id="fAddress" type="text" placeholder="e.g., 317 Main Street, Palmerston North Central"
+            class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-400 text-xs mb-1">Phone (Starter &amp; Pro)</label>
+            <input id="fPhone" type="text" placeholder="e.g., 06 355 1234"
+              class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+          </div>
+          <div>
+            <label class="block text-slate-400 text-xs mb-1">Stripe Plan Tier</label>
+            <select id="fTier" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
+              <option value="free">Free (Map &amp; Hours Only)</option>
+              <option value="starter">Starter (+ Phone Call Button)</option>
+              <option value="pro">Pro (+ Website/Order + Featured)</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-slate-400 text-xs mb-1">Direct Order / Website URL (Pro Only)</label>
+          <input id="fWebsite" type="url" placeholder="https://..."
+            class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+        </div>
+        <div>
+          <label class="block text-slate-400 text-xs mb-1">Cuisine / Categories (comma separated)</label>
+          <input id="fCuisine" type="text" placeholder="e.g., Bakery, Cafe, Coffee"
+            class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+        </div>
+        <div>
+          <label class="block text-slate-400 text-xs mb-1">Services</label>
+          <div class="flex gap-4 text-xs text-slate-300 pt-1">
+            <label class="flex items-center gap-1.5"><input type="checkbox" id="sTakeaway" checked /> Takeaway</label>
+            <label class="flex items-center gap-1.5"><input type="checkbox" id="sDineIn" /> Dine-In</label>
+            <label class="flex items-center gap-1.5"><input type="checkbox" id="sDelivery" /> Delivery</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
+        <button onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-sm">Cancel</button>
+        <button onclick="saveListing()" class="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm">Save Listing</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
     import {
-      getFirestore, collection, doc, getDocs, updateDoc, deleteDoc, writeBatch
+      getFirestore, collection, doc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch
     } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -135,33 +211,151 @@
 
     window.renderTable = () => {
       const q = document.getElementById("searchBox").value.toLowerCase();
-      const filtered = listingsCache.filter(item =>
-        (item.name || "").toLowerCase().includes(q) ||
-        (item.address || "").toLowerCase().includes(q)
-      );
+      const tierVal = document.getElementById("tierFilter").value;
+      const filtered = listingsCache.filter(item => {
+        const matchesText = (item.name || "").toLowerCase().includes(q) ||
+                            (item.address || "").toLowerCase().includes(q);
+        const matchesTier = tierVal === "all" || (item.tier || "free") === tierVal;
+        return matchesText && matchesTier;
+      });
       const tbody = document.getElementById("tableBody");
-      tbody.innerHTML = filtered.map(item => `
-        <tr class="hover:bg-slate-800/40">
-          <td class="py-3 px-2 font-medium text-white">${item.name || "-"}</td>
-          <td class="py-3 px-2 text-slate-400">${item.address || "-"}</td>
-          <td class="py-3 px-2 text-slate-300">${(item.tags?.cuisine || []).join(", ")}</td>
-          <td class="py-3 px-2">
-            <span class="px-2 py-0.5 rounded-full text-xs ${item.tier === 'pro' ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-800 text-slate-400'}">
-              ${item.tier || 'free'}
-            </span>
-          </td>
-          <td class="py-3 px-2 text-right space-x-2">
-            <button onclick="togglePro('${item.id}', '${item.tier || 'free'}')"
-              class="text-xs px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-300 hover:bg-amber-500/20">
-              ${item.tier === 'pro' ? 'Set Free' : 'Upgrade Pro'}
-            </button>
-            <button onclick="removeListing('${item.id}', '${(item.name || '').replace(/'/g, "\\'")}')"
-              class="text-xs px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20">
-              Delete
-            </button>
-          </td>
-        </tr>
-      `).join("");
+      tbody.innerHTML = filtered.map(item => {
+        const t = item.tier || "free";
+        return `
+          <tr class="hover:bg-slate-800/40">
+            <td class="py-3 px-2 font-medium text-white">${item.name || "-"}</td>
+            <td class="py-3 px-2 text-slate-400">${item.address || "-"}</td>
+            <td class="py-3 px-2 text-slate-300">${(item.tags?.cuisine || []).join(", ")}</td>
+            <td class="py-3 px-2">
+              <select onchange="changeTier('${item.id}', this.value)"
+                class="text-xs rounded-lg px-2 py-1 border border-slate-700 bg-slate-800 ${
+                  t === 'pro' ? 'text-amber-300 border-amber-500/40' :
+                  t === 'starter' ? 'text-sky-300 border-sky-500/40' : 'text-slate-300'
+                }">
+                <option value="free" ${t === 'free' ? 'selected' : ''}>Free</option>
+                <option value="starter" ${t === 'starter' ? 'selected' : ''}>Starter</option>
+                <option value="pro" ${t === 'pro' ? 'selected' : ''}>Pro</option>
+              </select>
+            </td>
+            <td class="py-3 px-2 text-right space-x-1.5 whitespace-nowrap">
+              <button onclick="openModal('${item.id}')"
+                class="text-xs px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200 hover:bg-slate-700">
+                Edit
+              </button>
+              <button onclick="removeListing('${item.id}', '${(item.name || '').replace(/'/g, "\\'")}')"
+                class="text-xs px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20">
+                Delete
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    };
+
+    window.changeTier = async (id, newTier) => {
+      await updateDoc(doc(db, "directory_listings", id), {
+        tier: newTier,
+        isClaimed: newTier !== "free",
+        isManualEdited: true
+      });
+      await loadListings();
+    };
+
+    window.openModal = (id = "") => {
+      const modal = document.getElementById("editModal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+
+      if (id) {
+        const item = listingsCache.find(x => x.id === id);
+        document.getElementById("modalTitle").textContent = "Edit Eatery";
+        document.getElementById("editDocId").value = item.id;
+        document.getElementById("fName").value = item.name || "";
+        document.getElementById("fAddress").value = item.address || "";
+        document.getElementById("fPhone").value = item.phone || "";
+        document.getElementById("fTier").value = item.tier || "free";
+        document.getElementById("fWebsite").value = item.directOrderUrl || "";
+        document.getElementById("fCuisine").value = (item.tags?.cuisine || []).join(", ");
+        const svcs = item.tags?.services || [];
+        document.getElementById("sTakeaway").checked = svcs.includes("Takeaway");
+        document.getElementById("sDineIn").checked = svcs.includes("Dine-In");
+        document.getElementById("sDelivery").checked = svcs.includes("Delivery");
+      } else {
+        document.getElementById("modalTitle").textContent = "Add New Eatery";
+        document.getElementById("editDocId").value = "";
+        document.getElementById("fName").value = "";
+        document.getElementById("fAddress").value = "";
+        document.getElementById("fPhone").value = "";
+        document.getElementById("fTier").value = "free";
+        document.getElementById("fWebsite").value = "";
+        document.getElementById("fCuisine").value = "";
+        document.getElementById("sTakeaway").checked = true;
+        document.getElementById("sDineIn").checked = false;
+        document.getElementById("sDelivery").checked = false;
+      }
+    };
+
+    window.closeModal = () => {
+      const modal = document.getElementById("editModal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    };
+
+    window.saveListing = async () => {
+      const name = document.getElementById("fName").value.trim();
+      const address = document.getElementById("fAddress").value.trim();
+      if (!name || !address) {
+        alert("Business Name and Street Address are required.");
+        return;
+      }
+
+      const existingId = document.getElementById("editDocId").value;
+      const docId = existingId || `manual_${name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_${Date.now().toString().slice(-4)}`;
+      const selectedTier = document.getElementById("fTier").value;
+
+      const services = [];
+      if (document.getElementById("sTakeaway").checked) services.push("Takeaway");
+      if (document.getElementById("sDineIn").checked) services.push("Dine-In");
+      if (document.getElementById("sDelivery").checked) services.push("Delivery");
+
+      const cuisine = document.getElementById("fCuisine").value
+        .split(",").map(s => s.trim()).filter(Boolean);
+
+      const defaultHours = {
+        monday: { open: "08:00", close: "16:00", closed: false },
+        tuesday: { open: "08:00", close: "16:00", closed: false },
+        wednesday: { open: "08:00", close: "16:00", closed: false },
+        thursday: { open: "08:00", close: "16:00", closed: false },
+        friday: { open: "08:00", close: "16:00", closed: false },
+        saturday: { open: "08:30", close: "15:00", closed: false },
+        sunday: { open: "08:30", close: "15:00", closed: true }
+      };
+
+      const payload = {
+        placeId: docId,
+        name,
+        address,
+        phone: document.getElementById("fPhone").value.trim(),
+        city: "Palmerston North",
+        region: "Manawatu-Whanganui",
+        tier: selectedTier,
+        isClaimed: selectedTier !== "free",
+        isManualEdited: true,
+        permanentlyClosed: false,
+        directOrderUrl: document.getElementById("fWebsite").value.trim(),
+        googleReviewUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + " " + address)}`,
+        tags: {
+          services: services.length ? services : ["Takeaway"],
+          meals: ["Breakfast", "Lunch"],
+          cuisine: cuisine.length ? cuisine : ["Local Eatery"]
+        }
+      };
+
+      if (!existingId) payload.operatingHours = defaultHours;
+
+      await setDoc(doc(db, "directory_listings", docId), payload, { merge: true });
+      window.closeModal();
+      await loadListings();
     };
 
     window.uploadJson = async () => {
@@ -216,12 +410,6 @@
       } catch (err) {
         statusBox.textContent = "Error: " + err.message;
       }
-    };
-
-    window.togglePro = async (id, currentTier) => {
-      const nextTier = currentTier === "pro" ? "free" : "pro";
-      await updateDoc(doc(db, "directory_listings", id), { tier: nextTier, isManualEdited: true });
-      await loadListings();
     };
 
     window.removeListing = async (id, name) => {
