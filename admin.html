@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EatsDirect Admin — Palmerston North Directory</title>
+  <title>EatsDirect Admin — All-New Zealand Directory</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
@@ -13,7 +13,7 @@
     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
       <div class="flex flex-col items-center mb-2">
         <img src="assets/images/edlogo.png" alt="EatsDirect" class="h-10 w-auto object-contain mb-2" />
-        <span class="text-xs font-normal text-slate-400">Admin Control Panel</span>
+        <span class="text-xs font-normal text-slate-400">Admin Control Panel • New Zealand</span>
       </div>
       <p class="text-sm text-slate-400 mt-4 mb-5">Enter Admin PIN to unlock</p>
       <input id="pinInput" type="password" maxlength="6" placeholder="••••"
@@ -32,8 +32,11 @@
       <div class="flex items-center gap-3">
         <img src="assets/images/edlogo.png" alt="EatsDirect" class="h-9 w-auto object-contain" />
         <div>
-          <span class="text-xs font-semibold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">Admin</span>
-          <p class="text-xs text-slate-400 mt-1">Project: <code class="text-emerald-400">eatsdirect-54ee0</code> • Palmerston North</p>
+          <span class="text-xs font-semibold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">Hybrid Admin</span>
+          <p class="text-xs text-slate-400 mt-1">
+            Static JSON: <span id="staticCount" class="text-white font-semibold">0</span> •
+            Firestore Overrides: <span id="overrideCount" class="text-emerald-400 font-semibold">0</span>
+          </p>
         </div>
       </div>
       <div class="flex flex-wrap gap-3">
@@ -41,9 +44,9 @@
           class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm px-4 py-2 rounded-xl transition">
           + Add New Eatery
         </button>
-        <button onclick="exportBackup()"
+        <button onclick="exportMergedJson()"
           class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm px-4 py-2 rounded-xl transition">
-          ⬇ Export JSON Backup
+          ⬇ Export Merged JSON
         </button>
         <a href="/" target="_blank"
           class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-emerald-400 text-sm px-4 py-2 rounded-xl transition">
@@ -52,46 +55,41 @@
       </div>
     </header>
 
-    <!-- Bulk JSON Importer -->
-    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-      <h2 class="text-lg font-semibold mb-1">Bulk Import / Clean Sync JSON</h2>
-      <p class="text-sm text-slate-400 mb-4">
-        Upload <code>palmy_eateries.json</code>. Records with <code>isManualEdited: true</code> or <code>isClaimed: true</code> are protected from overwrite.
-      </p>
-      <div class="flex flex-wrap items-center gap-4">
-        <input id="jsonFile" type="file" accept=".json"
-          class="text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-emerald-500 file:text-slate-950 hover:file:bg-emerald-400 cursor-pointer" />
-        <button id="uploadBtn" onclick="uploadJson()"
-          class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold px-5 py-2 rounded-xl text-sm transition">
-          Upload to Firestore
-        </button>
-      </div>
-      <div id="statusBox" class="mt-4 text-sm text-slate-300 bg-slate-950/70 border border-slate-800 rounded-xl p-3 hidden"></div>
-    </section>
-
-    <!-- Live Listings Table -->
+    <!-- Listings Control Table -->
     <section class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
       <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <h2 class="text-lg font-semibold">Directory Listings (<span id="totalCount">0</span>)</h2>
-        <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+        <div>
+          <h2 class="text-lg font-semibold">All-NZ Directory (<span id="totalCount">0</span>)</h2>
+          <p class="text-xs text-slate-400">Showing top 100 matching rows for fast editing. Use search or city filter to find any eatery.</p>
+        </div>
+        <div class="flex flex-wrap gap-2 w-full lg:w-auto">
+          <select id="cityFilter" onchange="renderTable()"
+            class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+            <option value="Palmerston North">Palmerston North</option>
+            <option value="all">All NZ Cities</option>
+          </select>
           <select id="tierFilter" onchange="renderTable()"
             class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
             <option value="all">All Tiers</option>
             <option value="pro">Pro</option>
             <option value="starter">Starter</option>
             <option value="free">Free</option>
+            <option value="overrides">Firestore Overrides Only</option>
           </select>
-          <input id="searchBox" oninput="renderTable()" type="text" placeholder="Search name or address..."
-            class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm w-full sm:w-64 focus:outline-none focus:border-emerald-500" />
+          <input id="searchBox" oninput="renderTable()" type="text" placeholder="Search name or street..."
+            class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm w-full sm:w-60 focus:outline-none focus:border-emerald-500" />
         </div>
       </div>
+
+      <div id="loadingMsg" class="text-sm text-slate-400 py-8 text-center">Loading static NZ dataset &amp; Firestore overrides...</div>
+
       <div class="overflow-x-auto">
         <table class="w-full text-left text-sm">
           <thead class="text-xs uppercase text-slate-400 border-b border-slate-800">
             <tr>
               <th class="py-3 px-2">Name</th>
+              <th class="py-3 px-2">City</th>
               <th class="py-3 px-2">Address</th>
-              <th class="py-3 px-2">Category</th>
               <th class="py-3 px-2">Stripe Tier</th>
               <th class="py-3 px-2 text-right">Actions</th>
             </tr>
@@ -118,15 +116,10 @@
           <input id="fName" type="text" placeholder="e.g., Wildflour Kitchen"
             class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white" />
         </div>
-        <div>
-          <label class="block text-slate-400 text-xs mb-1">Street Address *</label>
-          <input id="fAddress" type="text" placeholder="e.g., 317 Main Street, Palmerston North Central"
-            class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white" />
-        </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-slate-400 text-xs mb-1">Phone (Starter &amp; Pro)</label>
-            <input id="fPhone" type="text" placeholder="e.g., 06 355 1234"
+            <label class="block text-slate-400 text-xs mb-1">City *</label>
+            <input id="fCity" type="text" value="Palmerston North" placeholder="e.g., Palmerston North"
               class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white" />
           </div>
           <div>
@@ -139,9 +132,21 @@
           </div>
         </div>
         <div>
-          <label class="block text-slate-400 text-xs mb-1">Direct Order / Website URL (Pro Only)</label>
-          <input id="fWebsite" type="url" placeholder="https://..."
+          <label class="block text-slate-400 text-xs mb-1">Street Address *</label>
+          <input id="fAddress" type="text" placeholder="e.g., 317 Main Street, Palmerston North Central"
             class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-400 text-xs mb-1">Phone (Starter &amp; Pro)</label>
+            <input id="fPhone" type="text" placeholder="e.g., 06 355 1234"
+              class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+          </div>
+          <div>
+            <label class="block text-slate-400 text-xs mb-1">Direct Order / Website (Pro)</label>
+            <input id="fWebsite" type="url" placeholder="https://..."
+              class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+          </div>
         </div>
         <div>
           <label class="block text-slate-400 text-xs mb-1">Cuisine / Categories (comma separated)</label>
@@ -160,7 +165,7 @@
 
       <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
         <button onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-sm">Cancel</button>
-        <button onclick="saveListing()" class="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm">Save Listing</button>
+        <button onclick="saveListing()" class="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm">Save to Firestore</button>
       </div>
     </div>
   </div>
@@ -168,7 +173,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
     import {
-      getFirestore, collection, doc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch
+      getFirestore, collection, doc, getDocs, setDoc, deleteDoc
     } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -184,14 +189,16 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const ADMIN_PIN = "1967";
-    let listingsCache = [];
+
+    let mergedListings = [];
+    let overrideIds = new Set();
 
     window.checkPin = () => {
       const val = document.getElementById("pinInput").value.trim();
       if (val === ADMIN_PIN) {
         document.getElementById("pinGate").classList.add("hidden");
         document.getElementById("dashboard").classList.remove("hidden");
-        loadListings();
+        loadAllData();
       } else {
         document.getElementById("pinError").classList.remove("hidden");
       }
@@ -201,31 +208,91 @@
       if (e.key === "Enter") window.checkPin();
     });
 
-    async function loadListings() {
+    async function loadAllData() {
+      document.getElementById("loadingMsg").classList.remove("hidden");
+      let staticData = [];
+      try {
+        const res = await fetch("assets/data/nz_eateries.json");
+        if (res.ok) staticData = await res.json();
+      } catch (e) {
+        console.warn("Static JSON not loaded yet:", e);
+      }
+
       const snap = await getDocs(collection(db, "directory_listings"));
-      listingsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      listingsCache.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-      document.getElementById("totalCount").textContent = listingsCache.length;
+      const overridesMap = new Map();
+      overrideIds = new Set();
+
+      snap.forEach(d => {
+        const data = { id: d.id, placeId: d.id, ...d.data() };
+        overridesMap.set(d.id, data);
+        overrideIds.add(d.id);
+      });
+
+      const combinedMap = new Map();
+      staticData.forEach(item => {
+        const id = item.placeId || item.id;
+        combinedMap.set(id, { id, ...item });
+      });
+      overridesMap.forEach((val, key) => {
+        const base = combinedMap.get(key) || {};
+        combinedMap.set(key, { ...base, ...val, id: key });
+      });
+
+      mergedListings = Array.from(combinedMap.values()).filter(x => !x.permanentlyClosed);
+      mergedListings.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+      document.getElementById("staticCount").textContent = staticData.length.toLocaleString();
+      document.getElementById("overrideCount").textContent = overrideIds.size.toLocaleString();
+      document.getElementById("totalCount").textContent = mergedListings.length.toLocaleString();
+      document.getElementById("loadingMsg").classList.add("hidden");
+
+      populateCityDropdown();
       renderTable();
+    }
+
+    function populateCityDropdown() {
+      const select = document.getElementById("cityFilter");
+      const currentVal = select.value;
+      const cities = new Set();
+      mergedListings.forEach(x => { if (x.city) cities.add(x.city); });
+
+      select.innerHTML = `<option value="all">All NZ Cities (${cities.size})</option>`;
+      Array.from(cities).sort().forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c;
+        opt.textContent = c;
+        select.appendChild(opt);
+      });
+      if (Array.from(cities).includes(currentVal)) select.value = currentVal;
+      else if (Array.from(cities).includes("Palmerston North")) select.value = "Palmerston North";
     }
 
     window.renderTable = () => {
       const q = document.getElementById("searchBox").value.toLowerCase();
+      const cityVal = document.getElementById("cityFilter").value;
       const tierVal = document.getElementById("tierFilter").value;
-      const filtered = listingsCache.filter(item => {
-        const matchesText = (item.name || "").toLowerCase().includes(q) ||
-                            (item.address || "").toLowerCase().includes(q);
-        const matchesTier = tierVal === "all" || (item.tier || "free") === tierVal;
-        return matchesText && matchesTier;
-      });
-      const tbody = document.getElementById("tableBody");
-      tbody.innerHTML = filtered.map(item => {
+
+      const filtered = mergedListings.filter(item => {
+        if (cityVal !== "all" && item.city !== cityVal) return false;
         const t = item.tier || "free";
+        if (tierVal === "overrides" && !overrideIds.has(item.id)) return false;
+        if (tierVal !== "all" && tierVal !== "overrides" && t !== tierVal) return false;
+        if (q && !(item.name || "").toLowerCase().includes(q) && !(item.address || "").toLowerCase().includes(q)) return false;
+        return true;
+      });
+
+      const tbody = document.getElementById("tableBody");
+      tbody.innerHTML = filtered.slice(0, 100).map(item => {
+        const t = item.tier || "free";
+        const isOverride = overrideIds.has(item.id);
         return `
           <tr class="hover:bg-slate-800/40">
-            <td class="py-3 px-2 font-medium text-white">${item.name || "-"}</td>
-            <td class="py-3 px-2 text-slate-400">${item.address || "-"}</td>
-            <td class="py-3 px-2 text-slate-300">${(item.tags?.cuisine || []).join(", ")}</td>
+            <td class="py-3 px-2 font-medium text-white">
+              ${item.name || "-"}
+              ${isOverride ? '<span class="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400">DB</span>' : ''}
+            </td>
+            <td class="py-3 px-2 text-slate-300 text-xs">${item.city || "-"}</td>
+            <td class="py-3 px-2 text-slate-400 text-xs">${item.address || "-"}</td>
             <td class="py-3 px-2">
               <select onchange="changeTier('${item.id}', this.value)"
                 class="text-xs rounded-lg px-2 py-1 border border-slate-700 bg-slate-800 ${
@@ -242,9 +309,9 @@
                 class="text-xs px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200 hover:bg-slate-700">
                 Edit
               </button>
-              <button onclick="removeListing('${item.id}', '${(item.name || '').replace(/'/g, "\\'")}')"
+              <button onclick="hideListing('${item.id}', '${(item.name || '').replace(/'/g, "\\'")}')"
                 class="text-xs px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20">
-                Delete
+                Hide
               </button>
             </td>
           </tr>
@@ -253,12 +320,17 @@
     };
 
     window.changeTier = async (id, newTier) => {
-      await updateDoc(doc(db, "directory_listings", id), {
+      const base = mergedListings.find(x => x.id === id);
+      if (!base) return;
+      await setDoc(doc(db, "directory_listings", id), {
+        ...base,
+        placeId: id,
         tier: newTier,
         isClaimed: newTier !== "free",
         isManualEdited: true
-      });
-      await loadListings();
+      }, { merge: true });
+      localStorage.removeItem("eatsdirect_nz_cache_v1");
+      await loadAllData();
     };
 
     window.openModal = (id = "") => {
@@ -267,10 +339,11 @@
       modal.classList.add("flex");
 
       if (id) {
-        const item = listingsCache.find(x => x.id === id);
+        const item = mergedListings.find(x => x.id === id);
         document.getElementById("modalTitle").textContent = "Edit Eatery";
         document.getElementById("editDocId").value = item.id;
         document.getElementById("fName").value = item.name || "";
+        document.getElementById("fCity").value = item.city || "Palmerston North";
         document.getElementById("fAddress").value = item.address || "";
         document.getElementById("fPhone").value = item.phone || "";
         document.getElementById("fTier").value = item.tier || "free";
@@ -284,6 +357,7 @@
         document.getElementById("modalTitle").textContent = "Add New Eatery";
         document.getElementById("editDocId").value = "";
         document.getElementById("fName").value = "";
+        document.getElementById("fCity").value = "Palmerston North";
         document.getElementById("fAddress").value = "";
         document.getElementById("fPhone").value = "";
         document.getElementById("fTier").value = "free";
@@ -303,6 +377,7 @@
 
     window.saveListing = async () => {
       const name = document.getElementById("fName").value.trim();
+      const city = document.getElementById("fCity").value.trim() || "Palmerston North";
       const address = document.getElementById("fAddress").value.trim();
       if (!name || !address) {
         alert("Business Name and Street Address are required.");
@@ -321,23 +396,12 @@
       const cuisine = document.getElementById("fCuisine").value
         .split(",").map(s => s.trim()).filter(Boolean);
 
-      const defaultHours = {
-        monday: { open: "08:00", close: "16:00", closed: false },
-        tuesday: { open: "08:00", close: "16:00", closed: false },
-        wednesday: { open: "08:00", close: "16:00", closed: false },
-        thursday: { open: "08:00", close: "16:00", closed: false },
-        friday: { open: "08:00", close: "16:00", closed: false },
-        saturday: { open: "08:30", close: "15:00", closed: false },
-        sunday: { open: "08:30", close: "15:00", closed: true }
-      };
-
       const payload = {
         placeId: docId,
         name,
+        city,
         address,
         phone: document.getElementById("fPhone").value.trim(),
-        city: "Palmerston North",
-        region: "Manawatu-Whanganui",
         tier: selectedTier,
         isClaimed: selectedTier !== "free",
         isManualEdited: true,
@@ -346,84 +410,31 @@
         googleReviewUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + " " + address)}`,
         tags: {
           services: services.length ? services : ["Takeaway"],
-          meals: ["Breakfast", "Lunch"],
           cuisine: cuisine.length ? cuisine : ["Local Eatery"]
         }
       };
 
-      if (!existingId) payload.operatingHours = defaultHours;
-
       await setDoc(doc(db, "directory_listings", docId), payload, { merge: true });
+      localStorage.removeItem("eatsdirect_nz_cache_v1");
       window.closeModal();
-      await loadListings();
+      await loadAllData();
     };
 
-    window.uploadJson = async () => {
-      const fileInput = document.getElementById("jsonFile");
-      const statusBox = document.getElementById("statusBox");
-      if (!fileInput.files.length) {
-        alert("Please select palmy_eateries.json first.");
-        return;
-      }
-
-      statusBox.classList.remove("hidden");
-      statusBox.textContent = "Reading JSON file...";
-
-      try {
-        const text = await fileInput.files[0].text();
-        const records = JSON.parse(text);
-        if (!Array.isArray(records)) throw new Error("JSON must be an array.");
-
-        const existingSnap = await getDocs(collection(db, "directory_listings"));
-        const protectedIds = new Set();
-        existingSnap.forEach(d => {
-          const data = d.data();
-          if (data.isManualEdited || data.isClaimed) protectedIds.add(d.id);
-        });
-
-        let batch = writeBatch(db);
-        let opCount = 0;
-        let imported = 0;
-        let skipped = 0;
-
-        for (const item of records) {
-          const docId = item.placeId || `osm_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-          if (protectedIds.has(docId)) {
-            skipped++;
-            continue;
-          }
-          const ref = doc(db, "directory_listings", docId);
-          batch.set(ref, { ...item, placeId: docId }, { merge: true });
-          opCount++;
-          imported++;
-
-          if (opCount === 400) {
-            await batch.commit();
-            batch = writeBatch(db);
-            opCount = 0;
-          }
-        }
-        if (opCount > 0) await batch.commit();
-
-        statusBox.textContent = `Done! Imported/updated ${imported} listings. Skipped ${skipped} manually edited/claimed listings.`;
-        await loadListings();
-      } catch (err) {
-        statusBox.textContent = "Error: " + err.message;
-      }
+    window.hideListing = async (id, name) => {
+      if (!confirm(`Hide "${name}" from public directory?`)) return;
+      const base = mergedListings.find(x => x.id === id) || { placeId: id, name };
+      await setDoc(doc(db, "directory_listings", id), { ...base, permanentlyClosed: true, isManualEdited: true }, { merge: true });
+      localStorage.removeItem("eatsdirect_nz_cache_v1");
+      await loadAllData();
     };
 
-    window.removeListing = async (id, name) => {
-      if (!confirm(`Delete "${name}" from directory?`)) return;
-      await deleteDoc(doc(db, "directory_listings", id));
-      await loadListings();
-    };
-
-    window.exportBackup = () => {
-      const blob = new Blob([JSON.stringify(listingsCache, null, 2)], { type: "application/json" });
+    window.exportMergedJson = () => {
+      const clean = mergedListings.map(({ id, ...rest }) => rest);
+      const blob = new Blob([JSON.stringify(clean)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `eatsdirect_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `nz_eateries_merged_${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
     };
