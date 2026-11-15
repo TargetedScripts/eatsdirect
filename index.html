@@ -21,6 +21,17 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans flex flex-col">
 
+  <!-- Payment Success Banner (Triggered via ?claim_paid=1) -->
+  <div id="paymentSuccessBanner" class="hidden bg-emerald-500/15 border-b border-emerald-500/40 px-4 py-3 text-xs sm:text-sm text-emerald-200">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <span class="text-emerald-400 font-bold text-base">✓</span>
+        <span><strong>Payment Confirmed!</strong> Thank you for partnering with EatsDirect NZ. Your verified listing &amp; direct ordering links will be activated within 24 hours.</span>
+      </div>
+      <button onclick="document.getElementById('paymentSuccessBanner').classList.add('hidden')" class="text-emerald-300 hover:text-white font-bold text-base leading-none">&times;</button>
+    </div>
+  </div>
+
   <!-- Top Sticky Header -->
   <header class="border-b border-slate-800/80 bg-slate-950/95 backdrop-blur sticky top-0 z-30">
     <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
@@ -265,10 +276,13 @@
 
         <div>
           <label class="block text-xs text-slate-400 mb-1">Select Plan Tier *</label>
-          <select id="cTier" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-xs">
-            <option value="free">Free Claim ($0/mo) — Verify Ownership &amp; Opening Hours</option>
-            <option value="starter">Starter Partner ($29/mo) — Verified Badge + Direct Call Button</option>
-            <option value="pro">Featured Pro ($49/mo) — Top Placement + Direct Order Link + Specials</option>
+          <select id="cTier" onchange="updateClaimButtonLabel()"
+            class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-xs">
+            <option value="free">Free Claim ($0) — Verify Ownership &amp; Opening Hours</option>
+            <option value="starter_monthly">Starter Partner — Monthly ($29 NZD/mo) • Verified Badge + Direct Call</option>
+            <option value="starter_yearly">Starter Partner — Yearly ($290 NZD/yr — Save $58) • Verified Badge + Direct Call</option>
+            <option value="pro_monthly">Featured Pro — Monthly ($49 NZD/mo) • Top Placement + Direct Order Link + Specials</option>
+            <option value="pro_yearly">Featured Pro — Yearly ($490 NZD/yr — Save $98) • Top Placement + Direct Order Link + Specials</option>
           </select>
         </div>
 
@@ -284,7 +298,7 @@
           <button type="button" onclick="closeClaimModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs">Cancel</button>
           <button id="claimSubmitBtn" type="submit"
             class="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition">
-            Submit Claim Request
+            Submit Free Claim
           </button>
         </div>
       </form>
@@ -309,6 +323,14 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+
+    // Official Stripe Payment Links
+    const STRIPE_PAYMENT_LINKS = {
+      starter_monthly: "https://buy.stripe.com/8x228r7ZbfpF2Dl4nodwc00",
+      starter_yearly:  "https://buy.stripe.com/dRmeVdfrD3GX5Px078dwc01",
+      pro_monthly:     "https://buy.stripe.com/00w28renzelB4Lt6vwdwc02",
+      pro_yearly:      "https://buy.stripe.com/cNi8wPgvHb9p4Lt6vwdwc04"
+    };
 
     const CACHE_KEY = "eatsdirect_nz_cache_v3";
     const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
@@ -357,6 +379,16 @@
     let markersLayer = null;
 
     const tierRank = { pro: 0, starter: 1, free: 2 };
+
+    // Tampilkan banner sukses jika kembali dari Stripe (?claim_paid=1)
+    function handleStripeRedirectBanner() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("claim_paid") === "1") {
+        document.getElementById("paymentSuccessBanner").classList.remove("hidden");
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    }
 
     // Evaluasi status Open Now berdasarkan waktu NZ (Pacific/Auckland)
     function checkOpenStatus(oh) {
@@ -514,6 +546,7 @@
     }
 
     async function init() {
+      handleStripeRedirectBanner();
       allListings = await fetchMergedData();
       allListings.sort((a, b) => {
         const rankA = tierRank[a.tier || "free"] ?? 2;
@@ -891,12 +924,19 @@
       document.getElementById("detailDrawer").classList.add("hidden");
     };
 
+    window.updateClaimButtonLabel = () => {
+      const selected = document.getElementById("cTier").value;
+      const btn = document.getElementById("claimSubmitBtn");
+      btn.textContent = selected === "free" ? "Submit Free Claim" : "Continue to Stripe Checkout →";
+    };
+
     // Claim Listing Modal Logic
     window.openClaimModal = (placeId = "") => {
       const modal = document.getElementById("claimModal");
       const fb = document.getElementById("claimFeedback");
       fb.classList.add("hidden");
       document.getElementById("claimForm").reset();
+      window.updateClaimButtonLabel();
 
       if (placeId) {
         const item = allListings.find(x => x.placeId === placeId);
@@ -926,30 +966,48 @@
       const btn = document.getElementById("claimSubmitBtn");
       const fb = document.getElementById("claimFeedback");
       btn.disabled = true;
-      btn.textContent = "Submitting...";
+      btn.textContent = "Processing...";
+
+      const placeId = document.getElementById("cPlaceId").value.trim();
+      const ownerEmail = document.getElementById("cOwnerEmail").value.trim();
+      const selectedPlan = document.getElementById("cTier").value;
+      const baseTier = selectedPlan.startsWith("pro")
+        ? "pro"
+        : selectedPlan.startsWith("starter")
+        ? "starter"
+        : "free";
 
       try {
         await addDoc(collection(db, "claim_requests"), {
-          placeId: document.getElementById("cPlaceId").value.trim(),
+          placeId,
           businessName: document.getElementById("cBizName").value.trim(),
           city: document.getElementById("cCity").value.trim(),
           ownerName: document.getElementById("cOwnerName").value.trim(),
           ownerPhone: document.getElementById("cOwnerPhone").value.trim(),
-          ownerEmail: document.getElementById("cOwnerEmail").value.trim(),
-          requestedTier: document.getElementById("cTier").value,
+          ownerEmail,
+          requestedTier: baseTier,
+          billingPlan: selectedPlan,
           websiteUrl: document.getElementById("cWebsite").value.trim(),
-          status: "pending",
+          status: selectedPlan === "free" ? "pending" : "awaiting_payment",
           createdAt: serverTimestamp()
         });
 
-        fb.textContent = "✓ Claim request received! Our team will verify your business details within 24 hours.";
-        fb.classList.remove("hidden");
-        setTimeout(() => window.closeClaimModal(), 2500);
+        const stripeUrl = STRIPE_PAYMENT_LINKS[selectedPlan];
+        if (stripeUrl) {
+          const checkoutUrl = `${stripeUrl}?client_reference_id=${encodeURIComponent(placeId)}&prefilled_email=${encodeURIComponent(ownerEmail)}`;
+          fb.textContent = "✓ Claim recorded! Redirecting to secure Stripe payment...";
+          fb.classList.remove("hidden");
+          setTimeout(() => { window.location.href = checkoutUrl; }, 800);
+        } else {
+          fb.textContent = "✓ Free claim request received! Our team will verify your business details within 24 hours.";
+          fb.classList.remove("hidden");
+          setTimeout(() => window.closeClaimModal(), 2500);
+        }
       } catch (err) {
         alert("Failed to submit claim: " + err.message);
       } finally {
         btn.disabled = false;
-        btn.textContent = "Submit Claim Request";
+        window.updateClaimButtonLabel();
       }
     };
 
