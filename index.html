@@ -505,7 +505,7 @@
       markersLayer = L.layerGroup().addTo(mapInstance);
     }
 
-    // --- MAP PINS UPDATER (Hanya Menampilkan Mitra Starter & Pro) ---
+    // --- MAP PINS UPDATER (Fixed with parseFloat for safe string/number handling) ---
     function updateMapPins(items, city) {
       if (!mapInstance || !markersLayer) return;
       markersLayer.clearLayers();
@@ -518,17 +518,22 @@
 
       const validCoords = [];
       paidItems.slice(0, 150).forEach(item => {
-        if (typeof item.lat === "number" && typeof item.lng === "number") {
-          validCoords.push([item.lat, item.lng]);
+        const lat = parseFloat(item.lat);
+        const lng = parseFloat(item.lng);
+
+        if (!isNaN(lat) && !isNaN(lng)) {
+          validCoords.push([lat, lng]);
           const tier = item.tier;
           const color = tier === "pro" ? "#fbbf24" : "#38bdf8"; // Kuning Pro, Biru Starter
-          const marker = L.circleMarker([item.lat, item.lng], {
+          
+          const marker = L.circleMarker([lat, lng], {
             radius: tier === "pro" ? 9 : 6,
             fillColor: color,
             color: "#0f172a",
             weight: 2,
             fillOpacity: 0.9
           });
+          
           marker.bindPopup(`
             <div class="text-xs space-y-1">
               <p class="font-bold text-white">${item.name}</p>
@@ -697,8 +702,10 @@
 
       if (userCoords) {
         currentFiltered.forEach(item => {
-          item._dist = (typeof item.lat === "number" && typeof item.lng === "number")
-            ? haversineKm(userCoords.lat, userCoords.lng, item.lat, item.lng)
+          const lat = parseFloat(item.lat);
+          const lng = parseFloat(item.lng);
+          item._dist = (!isNaN(lat) && !isNaN(lng))
+            ? haversineKm(userCoords.lat, userCoords.lng, lat, lng)
             : 9999;
         });
         currentFiltered.sort((a, b) => a._dist - b._dist);
