@@ -26,7 +26,7 @@
     <div class="max-w-7xl mx-auto flex items-center justify-between gap-3">
       <div class="flex items-center gap-2">
         <span class="text-emerald-400 font-bold text-base">✓</span>
-        <span><strong>Payment Confirmed!</strong> Thank you for partnering with EatsDirect NZ. Your verified listing &amp; direct ordering links will be activated within 24 hours.</span>
+        <span><strong>Payment Confirmed!</strong> Thank you for partnering with EatsDirect NZ. Your verified listing &amp; direct ordering links are now active.</span>
       </div>
       <button onclick="document.getElementById('paymentSuccessBanner').classList.add('hidden')" class="text-emerald-300 hover:text-white font-bold text-base leading-none">&times;</button>
     </div>
@@ -37,7 +37,7 @@
     <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
       <div class="flex items-center gap-3">
         <a href="/" class="flex items-center gap-2.5">
-          <img src="assets/images/edlogo.png" alt="EatsDirect" class="h-8 sm:h-9 w-auto object-contain" />
+          <span class="text-xl font-black text-amber-400 tracking-tight">EatsDirect<span class="text-white">.nz</span></span>
         </a>
         <span id="headerCityBadge" class="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-full">
           📍 Palmerston North
@@ -132,7 +132,7 @@
     </div>
   </section>
 
-  <!-- Split Content Workspace (Cards Left + Interactive Map Right) -->
+  <!-- Split Content Workspace -->
   <main class="max-w-7xl mx-auto w-full px-4 py-6 flex-1">
     <div id="loadingState" class="text-center py-20 text-slate-400 text-sm">
       Loading New Zealand food directory...
@@ -173,7 +173,7 @@
     </div>
   </main>
 
-  <!-- Footer with ODbL Attribution -->
+  <!-- Footer -->
   <footer class="border-t border-slate-900 py-6 px-4 text-center text-xs text-slate-500 space-y-1">
     <p>&copy; 2026 EatsDirect NZ • Built by TargetedScripts • Zero-Commission Local Food Directory</p>
     <p class="text-[11px] text-slate-600">Directory &amp; map data &copy; OpenStreetMap contributors (ODbL)</p>
@@ -324,7 +324,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Official Stripe Payment Links
+    // Official Stripe Payment Links (Sesuaikan dengan Stripe link Anda jika diperlukan)
     const STRIPE_PAYMENT_LINKS = {
       starter_monthly: "https://buy.stripe.com/8x228r7ZbfpF2Dl4nodwc00",
       starter_yearly:  "https://buy.stripe.com/dRmeVdfrD3GX5Px078dwc01",
@@ -380,7 +380,6 @@
 
     const tierRank = { pro: 0, starter: 1, free: 2 };
 
-    // Tampilkan banner sukses jika kembali dari Stripe (?claim_paid=1)
     function handleStripeRedirectBanner() {
       const params = new URLSearchParams(window.location.search);
       if (params.get("claim_paid") === "1") {
@@ -390,7 +389,6 @@
       }
     }
 
-    // Evaluasi status Open Now berdasarkan waktu NZ (Pacific/Auckland)
     function checkOpenStatus(oh) {
       if (!oh || typeof oh !== "string") return { known: false, isOpen: false, label: "Hours not listed" };
       const clean = oh.trim();
@@ -798,7 +796,6 @@
           <article onclick="openDetailById('${item.placeId}')"
             class="cursor-pointer bg-slate-900 border ${borderClass} rounded-2xl overflow-hidden flex flex-col justify-between hover:border-slate-600 transition group">
             <div>
-              <!-- Card Visual Header -->
               <div class="h-24 bg-gradient-to-br ${gradient} p-3.5 flex flex-col justify-between relative border-b border-slate-800/60"
                 style="${item.coverImageUrl ? `background-image: linear-gradient(to top, rgba(15,23,42,0.92), rgba(15,23,42,0.35)), url('${item.coverImageUrl}'); background-size: cover; background-position: center;` : ''}">
                 <div class="flex items-center justify-between gap-2">
@@ -811,7 +808,6 @@
                 </div>
               </div>
 
-              <!-- Card Body -->
               <div class="p-4">
                 ${item.specialOffer ? `
                   <div class="mb-2 text-[11px] font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/25 px-2.5 py-1 rounded-lg truncate">
@@ -837,7 +833,6 @@
       }).join("");
     }
 
-    // Slide-Over Detail Drawer
     window.openDetailById = (placeId) => {
       const item = allListings.find(x => x.placeId === placeId);
       if (!item) return;
@@ -930,7 +925,6 @@
       btn.textContent = selected === "free" ? "Submit Free Claim" : "Continue to Stripe Checkout →";
     };
 
-    // Claim Listing Modal Logic
     window.openClaimModal = (placeId = "") => {
       const modal = document.getElementById("claimModal");
       const fb = document.getElementById("claimFeedback");
