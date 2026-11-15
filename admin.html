@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EatsDirect Admin — All-New Zealand Directory</title>
+  <title>EatsDirect Admin — All-New Zealand Directory & Claims</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
@@ -12,12 +12,12 @@
   <div id="pinGate" class="fixed inset-0 bg-slate-950 flex items-center justify-center z-50 p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
       <div class="flex flex-col items-center mb-2">
-        <img src="assets/images/edlogo.png" alt="EatsDirect" class="h-10 w-auto object-contain mb-2" />
-        <span class="text-xs font-normal text-slate-400">Admin Control Panel • New Zealand</span>
+        <span class="text-xl font-black text-amber-400 tracking-tight">EatsDirect<span class="text-white">.nz</span></span>
+        <span class="text-xs font-normal text-slate-400 mt-1">Admin Control Panel • New Zealand</span>
       </div>
       <p class="text-sm text-slate-400 mt-4 mb-5">Enter Admin PIN to unlock</p>
       <input id="pinInput" type="password" maxlength="6" placeholder="••••"
-        class="w-full text-center text-2xl tracking-[0.5em] bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 focus:outline-none focus:border-emerald-500 mb-4" />
+        class="w-full text-center text-2xl tracking-[0.5em] bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 focus:outline-none focus:border-emerald-500 mb-4 text-white" />
       <button onclick="checkPin()"
         class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold py-3 rounded-xl transition">
         Unlock Panel
@@ -27,16 +27,18 @@
   </div>
 
   <!-- Main Dashboard -->
-  <div id="dashboard" class="hidden max-w-6xl mx-auto p-6 space-y-6">
+  <div id="dashboard" class="hidden max-w-7xl mx-auto p-6 space-y-8">
     <header class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-5">
       <div class="flex items-center gap-3">
-        <img src="assets/images/edlogo.png" alt="EatsDirect" class="h-9 w-auto object-contain" />
         <div>
-          <span class="text-xs font-semibold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">Hybrid Admin</span>
-          <p class="text-xs text-slate-400 mt-1">
-            Static JSON: <span id="staticCount" class="text-white font-semibold">0</span> •
-            Firestore Overrides: <span id="overrideCount" class="text-emerald-400 font-semibold">0</span>
-          </p>
+          <span class="text-xl font-black text-amber-400 tracking-tight">EatsDirect<span class="text-white">.nz</span></span>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="text-xs font-semibold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">Hybrid Admin</span>
+            <span class="text-xs text-slate-400">
+              Static JSON: <span id="staticCount" class="text-white font-semibold">0</span> •
+              Firestore Overrides: <span id="overrideCount" class="text-emerald-400 font-semibold">0</span>
+            </span>
+          </div>
         </div>
       </div>
       <div class="flex flex-wrap gap-3">
@@ -55,12 +57,41 @@
       </div>
     </header>
 
-    <!-- Listings Control Table -->
+    <!-- Section 1: Claim Requests Management -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-lg font-semibold text-white">Pending Business Claims (<span id="claimsCount">0</span>)</h2>
+          <p class="text-xs text-slate-400">Review restaurant ownership verification requests and subscription selections submitted by owners.</p>
+        </div>
+        <button onclick="loadClaimRequests()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 transition">
+          Refresh Claims
+        </button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="text-xs uppercase text-slate-400 border-b border-slate-800">
+            <tr>
+              <th class="py-3 px-2">Business & City</th>
+              <th class="py-3 px-2">Owner Contact</th>
+              <th class="py-3 px-2">Requested Plan</th>
+              <th class="py-3 px-2">Status</th>
+              <th class="py-3 px-2 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="claimsTableBody" class="divide-y divide-slate-800/70">
+            <tr><td colspan="5" class="py-4 text-center text-slate-500 text-xs">Loading claim requests...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Section 2: Listings Control Table -->
     <section class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
       <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div>
           <h2 class="text-lg font-semibold">All-NZ Directory (<span id="totalCount">0</span>)</h2>
-          <p class="text-xs text-slate-400">Showing top 100 matching rows for fast editing. Use search or city filter to find any eatery.</p>
+          <p class="text-xs text-slate-400">Showing top matching rows for fast editing. Use search or city filter to find any eatery.</p>
         </div>
         <div class="flex flex-wrap gap-2 w-full lg:w-auto">
           <select id="cityFilter" onchange="renderTable()"
@@ -77,7 +108,7 @@
             <option value="overrides">Firestore Overrides Only</option>
           </select>
           <input id="searchBox" oninput="renderTable()" type="text" placeholder="Search name or street..."
-            class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm w-full sm:w-60 focus:outline-none focus:border-emerald-500" />
+            class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm w-full sm:w-60 focus:outline-none focus:border-emerald-500 text-white" />
         </div>
       </div>
 
@@ -199,6 +230,7 @@
         document.getElementById("pinGate").classList.add("hidden");
         document.getElementById("dashboard").classList.remove("hidden");
         loadAllData();
+        loadClaimRequests();
       } else {
         document.getElementById("pinError").classList.remove("hidden");
       }
@@ -249,6 +281,93 @@
       populateCityDropdown();
       renderTable();
     }
+
+    async function loadClaimRequests() {
+      const tbody = document.getElementById("claimsTableBody");
+      try {
+        const snap = await getDocs(collection(db, "claim_requests"));
+        document.getElementById("claimsCount").textContent = snap.size;
+        if (snap.empty) {
+          tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-500 text-xs">No pending claim requests found.</td></tr>`;
+          return;
+        }
+
+        let html = "";
+        snap.forEach(d => {
+          const req = d.data();
+          const reqId = d.id;
+          html += `
+            <tr class="hover:bg-slate-800/40 text-xs">
+              <td class="py-3 px-2 font-medium text-white">
+                ${req.businessName || '-'}<br/>
+                <span class="text-[11px] text-slate-400">📍 ${req.city || '-'} (ID: ${req.placeId || '-'})</span>
+              </td>
+              <td class="py-3 px-2 text-slate-300">
+                ${req.ownerName || '-'}<br/>
+                <span class="text-[11px] text-emerald-400">${req.ownerEmail || '-'}</span> • ${req.ownerPhone || '-'}
+              </td>
+              <td class="py-3 px-2 text-slate-300">
+                <span class="px-2 py-0.5 rounded font-bold ${req.requestedTier === 'pro' ? 'bg-amber-500/20 text-amber-300' : 'bg-sky-500/20 text-sky-300'}">
+                  ${(req.billingPlan || req.requestedTier || 'free').toUpperCase()}
+                </span>
+              </td>
+              <td class="py-3 px-2">
+                <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">${req.status || 'pending'}</span>
+              </td>
+              <td class="py-3 px-2 text-right space-x-1">
+                <button onclick="approveClaim('${reqId}', '${req.placeId}', '${req.requestedTier || 'free'}')"
+                  class="px-2.5 py-1 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 rounded font-semibold">
+                  Approve Tier
+                </button>
+                <button onclick="deleteClaim('${reqId}')"
+                  class="px-2.5 py-1 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 rounded">
+                  Dismiss
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+        tbody.innerHTML = html;
+      } catch (err) {
+        console.error("Error loading claims:", err);
+        tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-rose-400 text-xs">Failed to load claim requests.</td></tr>`;
+      }
+    }
+
+    window.approveClaim = async (reqId, placeId, tier) => {
+      if (!confirm(`Approve claim and update listing [${placeId}] to tier: ${tier.toUpperCase()}?`)) return;
+      try {
+        // Update directory_listings tier
+        const base = mergedListings.find(x => x.id === placeId) || { placeId, name: "Claimed Business" };
+        await setDoc(doc(db, "directory_listings", placeId), {
+          ...base,
+          placeId,
+          tier: tier,
+          isClaimed: true,
+          subscriptionStatus: 'active'
+        }, { merge: true });
+
+        // Delete claim request record
+        await deleteDoc(doc(db, "claim_requests", reqId));
+
+        localStorage.removeItem("eatsdirect_nz_cache_v3");
+        alert("Claim approved & listing updated successfully!");
+        loadAllData();
+        loadClaimRequests();
+      } catch (err) {
+        alert("Failed to approve claim: " + err.message);
+      }
+    };
+
+    window.deleteClaim = async (reqId) => {
+      if (!confirm("Delete this claim request?")) return;
+      try {
+        await deleteDoc(doc(db, "claim_requests", reqId));
+        loadClaimRequests();
+      } catch (err) {
+        alert("Failed to delete request: " + err.message);
+      }
+    };
 
     function populateCityDropdown() {
       const select = document.getElementById("cityFilter");
@@ -329,7 +448,7 @@
         isClaimed: newTier !== "free",
         isManualEdited: true
       }, { merge: true });
-      localStorage.removeItem("eatsdirect_nz_cache_v1");
+      localStorage.removeItem("eatsdirect_nz_cache_v3");
       await loadAllData();
     };
 
@@ -415,7 +534,7 @@
       };
 
       await setDoc(doc(db, "directory_listings", docId), payload, { merge: true });
-      localStorage.removeItem("eatsdirect_nz_cache_v1");
+      localStorage.removeItem("eatsdirect_nz_cache_v3");
       window.closeModal();
       await loadAllData();
     };
@@ -424,7 +543,7 @@
       if (!confirm(`Hide "${name}" from public directory?`)) return;
       const base = mergedListings.find(x => x.id === id) || { placeId: id, name };
       await setDoc(doc(db, "directory_listings", id), { ...base, permanentlyClosed: true, isManualEdited: true }, { merge: true });
-      localStorage.removeItem("eatsdirect_nz_cache_v1");
+      localStorage.removeItem("eatsdirect_nz_cache_v3");
       await loadAllData();
     };
 
