@@ -325,12 +325,19 @@
     const db = getFirestore(app);
 
     // Official Stripe Payment Links (Sesuaikan dengan Stripe link Anda jika diperlukan)
-    const STRIPE_PAYMENT_LINKS = {
-      starter_monthly: "https://buy.stripe.com/8x228r7ZbfpF2Dl4nodwc00",
-      starter_yearly:  "https://buy.stripe.com/dRmeVdfrD3GX5Px078dwc01",
-      pro_monthly:     "https://buy.stripe.com/00w28renzelB4Lt6vwdwc02",
-      pro_yearly:      "https://buy.stripe.com/cNi8wPgvHb9p4Lt6vwdwc04"
-    };
+const STRIPE_PAYMENT_LINKS = {
+  starter_monthly: "https://buy.stripe.com/test_8x228r7ZbfpF2Dl4nodwc00",
+  starter_yearly:  "https://buy.stripe.com/dRmeVdfrD3GX5Px078dwc01", // (atau link yearly Anda)
+  pro_monthly:     "https://buy.stripe.com/00w28renzelB4Lt6vwdwc02",     // (buat juga link pro-nya di Stripe)
+  pro_yearly:      "https://buy.stripe.com/cNi8wPgvHb9p4Lt6vwdwc04"      // (atau link pro yearly Anda)
+};
+    
+  //  const STRIPE_PAYMENT_LINKS = {
+  //    starter_monthly: "https://buy.stripe.com/8x228r7ZbfpF2Dl4nodwc00",
+  //    starter_yearly:  "https://buy.stripe.com/dRmeVdfrD3GX5Px078dwc01",
+  //    pro_monthly:     "https://buy.stripe.com/00w28renzelB4Lt6vwdwc02",
+  //    pro_yearly:      "https://buy.stripe.com/cNi8wPgvHb9p4Lt6vwdwc04"
+  //  };
 
     const CACHE_KEY = "eatsdirect_nz_cache_v3";
     const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
