@@ -12,6 +12,9 @@
     .leaflet-popup-content-wrapper, .leaflet-popup-tip {
       background: #1e293b; color: #f8fafc; border: 1px solid #334155;
     }
+    .dark-map-tiles {
+      filter: invert(100%) hue-rotate(180deg) brightness(92%) contrast(90%);
+    }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
@@ -465,9 +468,10 @@
     function initMap() {
       if (mapInstance) return;
       mapInstance = L.map("mapCanvas").setView(NZ_CITY_COORDS["Palmerston North"], 13);
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-        attribution: "&copy; OpenStreetMap &copy; CARTO",
-        maxZoom: 19
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors",
+        maxZoom: 19,
+        className: "dark-map-tiles"
       }).addTo(mapInstance);
       markersLayer = L.layerGroup().addTo(mapInstance);
     }
