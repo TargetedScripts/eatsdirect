@@ -3,100 +3,295 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EatsDirect NZ — Support Local Restaurants, Cafes, Takeaways &amp; Bakeries</title>
+  <title>EatsDirect NZ — Order Direct from Local Restaurants, Cafes &amp; Takeaways</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    .leaflet-container { background: #0f172a; font-family: inherit; }
+    .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+      background: #1e293b; color: #f8fafc; border: 1px solid #334155;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans flex flex-col">
 
-  <!-- Header -->
-  <header class="border-b border-slate-800/80 bg-slate-950/90 backdrop-blur sticky top-0 z-30">
-    <div class="max-w-6xl mx-auto px-4 py-3.5 flex flex-wrap items-center justify-between gap-4">
-      <a href="/" class="flex items-center gap-3">
-        <img src="assets/images/edlogo.png" alt="EatsDirect" class="h-9 sm:h-10 w-auto object-contain" />
-        <span id="headerCityBadge" class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
-          Palmerston North
+  <!-- Top Sticky Header -->
+  <header class="border-b border-slate-800/80 bg-slate-950/95 backdrop-blur sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <a href="/" class="flex items-center gap-2.5">
+          <img src="assets/images/edlogo.png" alt="EatsDirect" class="h-8 sm:h-9 w-auto object-contain" />
+        </a>
+        <span id="headerCityBadge" class="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-full">
+          📍 Palmerston North
         </span>
-      </a>
-      <div class="flex items-center gap-3 text-xs text-slate-400">
-        <span>Order direct • <span class="text-emerald-400 font-medium">Zero commission fees</span></span>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button id="nearMeBtn" onclick="locateUser()"
+          class="text-xs font-medium px-3 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 flex items-center gap-1.5 transition">
+          <span>📍</span> <span id="nearMeLabel">Near Me</span>
+        </button>
+        <button onclick="openClaimModal()"
+          class="text-xs font-semibold px-3.5 py-1.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 transition">
+          + List / Claim Business
+        </button>
       </div>
     </div>
   </header>
 
-  <!-- Hero & Search -->
-  <section class="max-w-6xl mx-auto px-4 pt-8 pb-6">
-    <h1 class="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2">
-      Support Local <span id="heroCityTitle" class="text-emerald-400">Palmerston North</span> Eateries Directly
-    </h1>
-    <p class="text-slate-400 text-sm sm:text-base mb-6">
-      Browse <span id="heroCount" class="text-white font-semibold">14,400+</span> restaurants, cafes, takeaways, bakeries &amp; cake shops across New Zealand.
-    </p>
+  <!-- Hero & Search Control Bar -->
+  <section class="border-b border-slate-900 bg-gradient-to-b from-slate-900/70 to-slate-950">
+    <div class="max-w-7xl mx-auto px-4 py-6">
+      <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-5">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+            Support Local <span id="heroCityTitle" class="text-emerald-400">Palmerston North</span> Eateries Directly
+          </h1>
+          <p class="text-slate-400 text-xs sm:text-sm mt-1">
+            Order direct with <span class="text-emerald-400 font-medium">0% commission fees</span> across
+            <span id="heroCount" class="text-white font-semibold">14,400+</span> New Zealand restaurants, cafes, takeaways &amp; bakeries.
+          </p>
+        </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
-      <select id="cityFilter" onchange="onCityChange()"
-        class="sm:col-span-3 bg-slate-900 border border-emerald-500/40 rounded-xl px-4 py-3 text-sm font-medium text-white focus:outline-none focus:border-emerald-500">
-        <option value="Palmerston North">Palmerston North</option>
-        <option value="all">All New Zealand</option>
-      </select>
+        <!-- Mobile View Switcher (List vs Map) -->
+        <div class="flex lg:hidden bg-slate-900 p-1 rounded-xl border border-slate-800 self-start">
+          <button id="mobListBtn" onclick="setMobileView('list')"
+            class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500 text-slate-950 transition">
+            ☰ List View
+          </button>
+          <button id="mobMapBtn" onclick="setMobileView('map')"
+            class="px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-400 transition">
+            🗺️ Map View
+          </button>
+        </div>
+      </div>
 
-      <input id="searchInput" oninput="applyFilters()" type="text"
-        placeholder="Search name, cuisine, or street..."
-        class="sm:col-span-5 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" />
+      <!-- Main Search & Filters -->
+      <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+        <select id="cityFilter" onchange="onCityChange()"
+          class="sm:col-span-3 bg-slate-900 border border-emerald-500/40 rounded-xl px-3.5 py-2.5 text-sm font-medium text-white focus:outline-none focus:border-emerald-500">
+          <option value="Palmerston North">Palmerston North</option>
+          <option value="all">All New Zealand</option>
+        </select>
 
-      <select id="serviceFilter" onchange="applyFilters()"
-        class="sm:col-span-2 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
-        <option value="all">All Services</option>
-        <option value="Takeaway">Takeaway</option>
-        <option value="Dine-In">Dine-In</option>
-        <option value="Delivery">Delivery</option>
-      </select>
+        <div class="sm:col-span-5 relative">
+          <input id="searchInput" oninput="applyFilters()" type="text"
+            placeholder="Search eatery, cuisine, or street..."
+            class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" />
+          <span class="absolute left-3 top-2.5 text-slate-500 text-sm">🔍</span>
+        </div>
 
-      <select id="categoryFilter" onchange="applyFilters()"
-        class="sm:col-span-2 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
-        <option value="all">All Categories</option>
-      </select>
-    </div>
+        <select id="serviceFilter" onchange="applyFilters()"
+          class="sm:col-span-2 bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+          <option value="all">All Services</option>
+          <option value="Takeaway">Takeaway</option>
+          <option value="Dine-In">Dine-In</option>
+          <option value="Delivery">Delivery</option>
+        </select>
 
-    <!-- Quick Filter Pills -->
-    <div class="flex flex-wrap items-center gap-2 mt-4">
-      <button id="partnersOnlyBtn" onclick="togglePartnersOnly()"
-        class="text-xs px-3.5 py-1.5 rounded-full border border-slate-700 bg-slate-900 text-slate-300 hover:border-amber-500 transition">
-        ⭐ Direct Partners (Starter &amp; Pro)
-      </button>
-      <span id="resultCount" class="text-xs text-slate-400 ml-auto">Loading NZ directory...</span>
+        <select id="categoryFilter" onchange="applyFilters()"
+          class="sm:col-span-2 bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+          <option value="all">All Categories</option>
+        </select>
+      </div>
+
+      <!-- Quick Action Pills -->
+      <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pt-3.5">
+        <button id="openNowBtn" onclick="toggleQuickFilter('openNow')"
+          class="shrink-0 text-xs font-medium px-3.5 py-1.5 rounded-full border border-slate-800 bg-slate-900 text-slate-300 hover:border-emerald-500/50 transition">
+          🟢 Open Now
+        </button>
+        <button id="partnersOnlyBtn" onclick="toggleQuickFilter('partners')"
+          class="shrink-0 text-xs font-medium px-3.5 py-1.5 rounded-full border border-slate-800 bg-slate-900 text-slate-300 hover:border-amber-500/50 transition">
+          ⭐ Direct Partners (Starter &amp; Pro)
+        </button>
+        <button id="specialsOnlyBtn" onclick="toggleQuickFilter('specials')"
+          class="shrink-0 text-xs font-medium px-3.5 py-1.5 rounded-full border border-slate-800 bg-slate-900 text-slate-300 hover:border-rose-500/50 transition">
+          🔥 Direct Specials
+        </button>
+        <span id="resultCount" class="shrink-0 text-xs text-slate-400 ml-auto pl-2">Loading directory...</span>
+      </div>
     </div>
   </section>
 
-  <!-- Directory Grid -->
-  <main class="max-w-6xl mx-auto px-4 pb-16">
-    <div id="loadingState" class="text-center py-16 text-slate-400 text-sm">
+  <!-- Split Content Workspace (Cards Left + Interactive Map Right) -->
+  <main class="max-w-7xl mx-auto w-full px-4 py-6 flex-1">
+    <div id="loadingState" class="text-center py-20 text-slate-400 text-sm">
       Loading New Zealand food directory...
     </div>
 
-    <div id="emptyState" class="hidden text-center py-16 bg-slate-900/50 border border-slate-800 rounded-2xl">
-      <p class="text-slate-300 font-medium">No matching eateries found</p>
-      <p class="text-slate-500 text-sm mt-1">Try switching city, clearing search, or changing filters.</p>
-    </div>
+    <div id="workspaceGrid" class="hidden grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <!-- Left Column: Cards Grid -->
+      <div id="listPane" class="lg:col-span-7 space-y-4">
+        <div id="emptyState" class="hidden text-center py-16 bg-slate-900/50 border border-slate-800 rounded-2xl">
+          <p class="text-slate-300 font-medium">No matching eateries found</p>
+          <p class="text-slate-500 text-sm mt-1">Try switching city, clearing search, or turning off active filters.</p>
+        </div>
 
-    <div id="cardsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        <div id="cardsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
 
-    <div id="loadMoreWrap" class="hidden text-center mt-8">
-      <button onclick="loadMore()"
-        class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm text-white font-medium px-6 py-3 rounded-xl transition">
-        Load More Eateries
-      </button>
+        <div id="loadMoreWrap" class="hidden text-center pt-4">
+          <button onclick="loadMore()"
+            class="bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs text-white font-semibold px-6 py-3 rounded-xl transition">
+            Load More Eateries
+          </button>
+        </div>
+      </div>
+
+      <!-- Right Column: Sticky Interactive Leaflet Map -->
+      <div id="mapPane" class="hidden lg:block lg:col-span-5 lg:sticky lg:top-20">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+          <div class="px-4 py-2.5 border-b border-slate-800 flex items-center justify-between text-xs">
+            <span class="font-semibold text-slate-200">🗺️ Interactive Map View</span>
+            <div class="flex items-center gap-3 text-[11px] text-slate-400">
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span> Pro</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-sky-400 inline-block"></span> Starter</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span> Free</span>
+            </div>
+          </div>
+          <div id="mapCanvas" class="w-full h-[540px]"></div>
+        </div>
+      </div>
     </div>
   </main>
 
-  <!-- Footer -->
-  <footer class="border-t border-slate-900 py-8 text-center text-xs text-slate-500">
-    <p>&copy; 2026 EatsDirect NZ • Aotearoa New Zealand Local Food Directory</p>
+  <!-- Footer with ODbL Attribution -->
+  <footer class="border-t border-slate-900 py-6 px-4 text-center text-xs text-slate-500 space-y-1">
+    <p>&copy; 2026 EatsDirect NZ • Built by TargetedScripts • Zero-Commission Local Food Directory</p>
+    <p class="text-[11px] text-slate-600">Directory &amp; map data &copy; OpenStreetMap contributors (ODbL)</p>
   </footer>
+
+  <!-- Slide-Over Detail Drawer -->
+  <div id="detailDrawer" class="fixed inset-0 z-50 hidden">
+    <div onclick="closeDetailDrawer()" class="absolute inset-0 bg-black/75 backdrop-blur-xs"></div>
+    <aside class="absolute right-0 top-0 bottom-0 w-full max-w-md bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col overflow-y-auto">
+      <div id="drawerBanner" class="h-40 bg-gradient-to-br from-emerald-900/50 via-slate-900 to-slate-950 relative p-5 flex flex-col justify-between border-b border-slate-800">
+        <div class="flex items-center justify-between">
+          <span id="drawerTierBadge"></span>
+          <button onclick="closeDetailDrawer()" class="w-8 h-8 rounded-full bg-slate-950/70 text-slate-300 hover:text-white flex items-center justify-center text-lg">&times;</button>
+        </div>
+        <div>
+          <h2 id="drawerName" class="text-xl font-bold text-white leading-tight"></h2>
+          <p id="drawerCity" class="text-xs text-emerald-400 mt-0.5"></p>
+        </div>
+      </div>
+
+      <div class="p-5 space-y-5 flex-1 text-sm">
+        <div id="drawerSpecialBox" class="hidden bg-amber-500/10 border border-amber-500/30 rounded-xl p-3.5">
+          <p class="text-[11px] font-bold uppercase tracking-wider text-amber-400 mb-0.5">🔥 Direct Special Offer</p>
+          <p id="drawerSpecialText" class="text-sm text-amber-100 font-medium"></p>
+        </div>
+
+        <div class="space-y-2.5">
+          <div class="flex items-start gap-2.5 text-slate-300 text-xs">
+            <span>📍</span>
+            <span id="drawerAddress"></span>
+          </div>
+          <div class="flex items-start gap-2.5 text-slate-300 text-xs">
+            <span>🕒</span>
+            <div>
+              <span id="drawerOpenBadge" class="font-semibold"></span>
+              <p id="drawerHours" class="text-slate-400 mt-0.5"></p>
+            </div>
+          </div>
+          <div id="drawerDistanceRow" class="hidden items-center gap-2.5 text-emerald-400 text-xs font-medium">
+            <span>🧭</span>
+            <span id="drawerDistance"></span>
+          </div>
+        </div>
+
+        <div>
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Cuisine &amp; Services</p>
+          <div id="drawerTags" class="flex flex-wrap gap-1.5"></div>
+        </div>
+
+        <div id="drawerActions" class="pt-3 border-t border-slate-800 space-y-2.5"></div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Claim Listing & Upgrade Modal -->
+  <div id="claimModal" class="fixed inset-0 bg-black/80 backdrop-blur-xs hidden items-center justify-center z-50 p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
+      <div class="flex items-start justify-between border-b border-slate-800 pb-3">
+        <div>
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-emerald-400">Business Owner Verification</span>
+          <h3 id="claimModalTitle" class="text-lg font-bold text-white mt-0.5">Claim Your Listing</h3>
+        </div>
+        <button onclick="closeClaimModal()" class="text-slate-400 hover:text-white text-xl leading-none">&times;</button>
+      </div>
+
+      <form id="claimForm" onsubmit="submitClaim(event)" class="space-y-3 text-sm">
+        <input type="hidden" id="cPlaceId" />
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Business Name *</label>
+            <input id="cBizName" type="text" required placeholder="e.g., Bangkok Thai Takeaway"
+              class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">City *</label>
+            <input id="cCity" type="text" required placeholder="e.g., Palmerston North"
+              class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Your Full Name *</label>
+            <input id="cOwnerName" type="text" required placeholder="Owner / Manager name"
+              class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Phone / Mobile *</label>
+            <input id="cOwnerPhone" type="tel" required placeholder="e.g., 021 123 4567"
+              class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Business Email *</label>
+          <input id="cOwnerEmail" type="email" required placeholder="owner@yourrestaurant.co.nz"
+            class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs" />
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Select Plan Tier *</label>
+          <select id="cTier" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-xs">
+            <option value="free">Free Claim ($0/mo) — Verify Ownership &amp; Opening Hours</option>
+            <option value="starter">Starter Partner ($19/mo) — Verified Badge + Direct Call Button</option>
+            <option value="pro">Featured Pro ($39/mo) — Top Placement + Direct Order Link + Specials</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Direct Order / Website URL (Optional)</label>
+          <input id="cWebsite" type="url" placeholder="https://yourrestaurant.co.nz"
+            class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs" />
+        </div>
+
+        <div id="claimFeedback" class="hidden text-xs p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300"></div>
+
+        <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
+          <button type="button" onclick="closeClaimModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs">Cancel</button>
+          <button id="claimSubmitBtn" type="submit"
+            class="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition">
+            Submit Claim Request
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
     import {
-      getFirestore, collection, getDocs
+      getFirestore, collection, getDocs, addDoc, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -112,15 +307,117 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const CACHE_KEY = "eatsdirect_nz_cache_v2";
+    const CACHE_KEY = "eatsdirect_nz_cache_v3";
     const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+
+    const NZ_CITY_COORDS = {
+      "Palmerston North": [-40.3523, 175.6082],
+      "Auckland": [-36.8485, 174.7633],
+      "Wellington": [-41.2865, 174.7762],
+      "Christchurch": [-43.5321, 172.6362],
+      "Hamilton": [-37.7870, 175.2793],
+      "Tauranga": [-37.6878, 176.1651],
+      "Dunedin": [-45.8788, 170.5028],
+      "Napier": [-39.4928, 176.9120],
+      "Hastings": [-39.6381, 176.8492],
+      "New Plymouth": [-39.0556, 174.0752],
+      "Rotorua": [-38.1368, 176.2497],
+      "Whangarei": [-35.7275, 174.3166],
+      "Nelson": [-41.2706, 173.2840],
+      "Invercargill": [-46.4132, 168.3538],
+      "Queenstown": [-45.0312, 168.6626],
+      "Lower Hutt": [-41.2127, 174.8997],
+      "Upper Hutt": [-41.1244, 175.0708],
+      "Porirua": [-41.1339, 174.8406],
+      "Feilding": [-40.2250, 175.5650],
+      "Whanganui": [-39.9301, 175.0479]
+    };
+
+    const CUISINE_GRADIENTS = {
+      "thai": "from-amber-900/50 via-orange-950/40 to-slate-900",
+      "cafe": "from-stone-800/70 via-amber-950/30 to-slate-900",
+      "coffee": "from-stone-800/70 via-amber-950/30 to-slate-900",
+      "bakery": "from-yellow-900/40 via-amber-950/30 to-slate-900",
+      "indian": "from-orange-900/50 via-red-950/30 to-slate-900",
+      "japanese": "from-rose-900/40 via-slate-900 to-slate-950",
+      "sushi": "from-rose-900/40 via-slate-900 to-slate-950",
+      "pizza": "from-red-900/45 via-amber-950/30 to-slate-900",
+      "burger": "from-amber-900/45 via-slate-900 to-slate-950"
+    };
 
     let allListings = [];
     let currentFiltered = [];
-    let visibleCount = 36;
-    let filterPartnersOnly = false;
+    let visibleCount = 30;
+    let userCoords = null;
+    let filters = { openNow: false, partners: false, specials: false };
+    let mapInstance = null;
+    let markersLayer = null;
 
     const tierRank = { pro: 0, starter: 1, free: 2 };
+
+    // Evaluasi status Open Now berdasarkan waktu NZ (Pacific/Auckland)
+    function checkOpenStatus(oh) {
+      if (!oh || typeof oh !== "string") return { known: false, isOpen: false, label: "Hours not listed" };
+      const clean = oh.trim();
+      if (clean === "24/7") return { known: true, isOpen: true, label: "Open 24/7" };
+
+      try {
+        const nowNz = new Date(new Date().toLocaleString("en-US", { timeZone: "Pacific/Auckland" }));
+        const dayMap = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+        const todayCode = dayMap[nowNz.getDay()];
+        const currentMins = nowNz.getHours() * 60 + nowNz.getMinutes();
+
+        const rules = clean.split(";");
+        for (const rule of rules) {
+          const r = rule.trim();
+          if (!r) continue;
+          const timeMatch = r.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+          if (!timeMatch) continue;
+
+          const startM = parseInt(timeMatch[1]) * 60 + parseInt(timeMatch[2]);
+          let endM = parseInt(timeMatch[3]) * 60 + parseInt(timeMatch[4]);
+          if (endM <= startM) endM += 24 * 60;
+
+          const dayPart = r.slice(0, timeMatch.index).trim();
+          let dayMatches = !dayPart;
+          if (dayPart) {
+            if (dayPart.includes(todayCode)) dayMatches = true;
+            else if (dayPart.includes("-")) {
+              const [d1, d2] = dayPart.split("-").map(x => x.trim().slice(0, 2));
+              const i1 = dayMap.indexOf(d1), i2 = dayMap.indexOf(d2), ic = dayMap.indexOf(todayCode);
+              if (i1 !== -1 && i2 !== -1) {
+                dayMatches = i1 <= i2 ? (ic >= i1 && ic <= i2) : (ic >= i1 || ic <= i2);
+              }
+            }
+          }
+          if (dayMatches) {
+            if (r.toLowerCase().includes("off")) return { known: true, isOpen: false, label: "Closed Today" };
+            const open = currentMins >= startM && currentMins <= endM;
+            return { known: true, isOpen: open, label: open ? "Open Now" : "Closed Now" };
+          }
+        }
+      } catch (_) {}
+      return { known: false, isOpen: false, label: clean };
+    }
+
+    function haversineKm(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function getBannerGradient(cuisines) {
+      for (const c of (cuisines || [])) {
+        const key = c.toLowerCase();
+        for (const [k, grad] of Object.entries(CUISINE_GRADIENTS)) {
+          if (key.includes(k)) return grad;
+        }
+      }
+      return "from-emerald-950/60 via-slate-900 to-slate-950";
+    }
 
     async function fetchMergedData() {
       try {
@@ -136,97 +433,125 @@
       let staticData = [];
       try {
         const res = await fetch("./assets/data/nz_eateries.json?v=" + Math.floor(Date.now() / 3600000));
-        if (res.ok) {
-          staticData = await res.json();
-        } else {
-          console.error("Failed to fetch nz_eateries.json, status:", res.status);
-        }
+        if (res.ok) staticData = await res.json();
       } catch (e) {
-        console.error("Error fetching nz_eateries.json:", e);
+        console.warn("Static JSON fetch warning:", e);
       }
 
       const overridesMap = new Map();
       try {
         const snap = await getDocs(collection(db, "directory_listings"));
-        snap.forEach(d => {
-          overridesMap.set(d.id, { placeId: d.id, ...d.data() });
-        });
+        snap.forEach(d => overridesMap.set(d.id, { placeId: d.id, ...d.data() }));
       } catch (e) {
         console.warn("Firestore overrides warning:", e);
       }
 
       const combinedMap = new Map();
-      staticData.forEach(item => {
-        const id = item.placeId || item.id;
-        combinedMap.set(id, item);
-      });
+      staticData.forEach(item => combinedMap.set(item.placeId || item.id, item));
       overridesMap.forEach((val, key) => {
         const base = combinedMap.get(key) || {};
         combinedMap.set(key, { ...base, ...val, placeId: key });
       });
 
       const finalData = Array.from(combinedMap.values()).filter(x => !x.permanentlyClosed);
-
       if (staticData.length > 100) {
         try {
           localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: finalData }));
         } catch (_) {}
       }
-
       return finalData;
     }
 
-    async function init() {
-      try {
-        allListings = await fetchMergedData();
+    function initMap() {
+      if (mapInstance) return;
+      mapInstance = L.map("mapCanvas").setView(NZ_CITY_COORDS["Palmerston North"], 13);
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        attribution: "&copy; OpenStreetMap &copy; CARTO",
+        maxZoom: 19
+      }).addTo(mapInstance);
+      markersLayer = L.layerGroup().addTo(mapInstance);
+    }
 
-        allListings.sort((a, b) => {
-          const rankA = tierRank[a.tier || "free"] ?? 2;
-          const rankB = tierRank[b.tier || "free"] ?? 2;
-          if (rankA !== rankB) return rankA - rankB;
-          return (a.name || "").localeCompare(b.name || "");
-        });
+    function updateMapPins(items, city) {
+      if (!mapInstance || !markersLayer) return;
+      markersLayer.clearLayers();
 
-        document.getElementById("heroCount").textContent = allListings.length.toLocaleString();
-        populateCities();
-        populateCategories();
-        document.getElementById("loadingState").classList.add("hidden");
-        window.applyFilters();
-      } catch (err) {
-        document.getElementById("loadingState").textContent = "Failed to load directory: " + err.message;
+      const validCoords = [];
+      items.slice(0, 150).forEach(item => {
+        if (typeof item.lat === "number" && typeof item.lng === "number") {
+          validCoords.push([item.lat, item.lng]);
+          const tier = item.tier || "free";
+          const color = tier === "pro" ? "#fbbf24" : tier === "starter" ? "#38bdf8" : "#10b981";
+          const marker = L.circleMarker([item.lat, item.lng], {
+            radius: tier === "pro" ? 9 : 6,
+            fillColor: color,
+            color: "#0f172a",
+            weight: 2,
+            fillOpacity: 0.9
+          });
+          marker.bindPopup(`
+            <div class="text-xs space-y-1">
+              <p class="font-bold text-white">${item.name}</p>
+              <p class="text-slate-300">${item.address || item.city}</p>
+              <button onclick="openDetailById('${item.placeId}')" class="mt-1 text-emerald-400 font-semibold underline">View Details →</button>
+            </div>
+          `);
+          marker.addTo(markersLayer);
+        }
+      });
+
+      if (validCoords.length > 0) {
+        mapInstance.fitBounds(validCoords, { padding: [30, 30], maxZoom: 14 });
+      } else if (NZ_CITY_COORDS[city]) {
+        mapInstance.setView(NZ_CITY_COORDS[city], 13);
+      } else {
+        mapInstance.setView([-41.2865, 174.7762], 5);
       }
+    }
+
+    async function init() {
+      allListings = await fetchMergedData();
+      allListings.sort((a, b) => {
+        const rankA = tierRank[a.tier || "free"] ?? 2;
+        const rankB = tierRank[b.tier || "free"] ?? 2;
+        if (rankA !== rankB) return rankA - rankB;
+        return (a.name || "").localeCompare(b.name || "");
+      });
+
+      document.getElementById("heroCount").textContent = allListings.length.toLocaleString();
+      populateCities();
+      populateCategories();
+
+      document.getElementById("loadingState").classList.add("hidden");
+      const ws = document.getElementById("workspaceGrid");
+      ws.classList.remove("hidden");
+      ws.classList.add("grid");
+
+      initMap();
+      window.applyFilters();
     }
 
     function populateCities() {
       const counts = {};
       allListings.forEach(item => {
-        if (!item.city) return;
-        counts[item.city] = (counts[item.city] || 0) + 1;
+        if (item.city) counts[item.city] = (counts[item.city] || 0) + 1;
       });
       const select = document.getElementById("cityFilter");
       select.innerHTML = `<option value="all">All New Zealand (${allListings.length.toLocaleString()})</option>`;
-
       Object.keys(counts).sort().forEach(city => {
         const opt = document.createElement("option");
         opt.value = city;
         opt.textContent = `${city} (${counts[city]})`;
         select.appendChild(opt);
       });
-
-      if (counts["Palmerston North"]) {
-        select.value = "Palmerston North";
-      } else {
-        select.value = "all";
-      }
+      select.value = counts["Palmerston North"] ? "Palmerston North" : "all";
       window.onCityChange();
     }
 
     function populateCategories() {
       const catCounts = {};
       allListings.forEach(item => {
-        (item.tags?.cuisine || []).forEach(c => {
-          catCounts[c] = (catCounts[c] || 0) + 1;
-        });
+        (item.tags?.cuisine || []).forEach(c => catCounts[c] = (catCounts[c] || 0) + 1);
       });
       const select = document.getElementById("categoryFilter");
       Object.entries(catCounts)
@@ -242,22 +567,69 @@
 
     window.onCityChange = () => {
       const city = document.getElementById("cityFilter").value;
-      document.getElementById("heroCityTitle").textContent = city === "all" ? "New Zealand" : city;
-      document.getElementById("headerCityBadge").textContent = city === "all" ? "New Zealand" : city;
+      const label = city === "all" ? "New Zealand" : city;
+      document.getElementById("heroCityTitle").textContent = label;
+      document.getElementById("headerCityBadge").textContent = `📍 ${label}`;
       window.applyFilters();
     };
 
-    window.togglePartnersOnly = () => {
-      filterPartnersOnly = !filterPartnersOnly;
-      const btn = document.getElementById("partnersOnlyBtn");
-      btn.classList.toggle("border-amber-500", filterPartnersOnly);
-      btn.classList.toggle("bg-amber-500/10", filterPartnersOnly);
-      btn.classList.toggle("text-amber-300", filterPartnersOnly);
+    window.toggleQuickFilter = (key) => {
+      filters[key] = !filters[key];
+      const mapBtn = {
+        openNow: ["openNowBtn", "border-emerald-500", "bg-emerald-500/15", "text-emerald-300"],
+        partners: ["partnersOnlyBtn", "border-amber-500", "bg-amber-500/15", "text-amber-300"],
+        specials: ["specialsOnlyBtn", "border-rose-500", "bg-rose-500/15", "text-rose-300"]
+      };
+      const [id, ...classes] = mapBtn[key];
+      const btn = document.getElementById(id);
+      classes.forEach(c => btn.classList.toggle(c, filters[key]));
       window.applyFilters();
+    };
+
+    window.locateUser = () => {
+      if (!navigator.geolocation) return alert("GPS not supported in this browser.");
+      document.getElementById("nearMeLabel").textContent = "Locating...";
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          userCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          document.getElementById("nearMeLabel").textContent = "Near Me ✓";
+          document.getElementById("nearMeBtn").classList.add("border-emerald-500", "text-emerald-400");
+          if (mapInstance) mapInstance.setView([userCoords.lat, userCoords.lng], 14);
+          window.applyFilters();
+        },
+        () => {
+          document.getElementById("nearMeLabel").textContent = "Near Me";
+          alert("Could not get your location. Please allow location permission.");
+        }
+      );
+    };
+
+    window.setMobileView = (mode) => {
+      const listPane = document.getElementById("listPane");
+      const mapPane = document.getElementById("mapPane");
+      const lBtn = document.getElementById("mobListBtn");
+      const mBtn = document.getElementById("mobMapBtn");
+
+      if (mode === "map") {
+        listPane.classList.add("hidden", "lg:block");
+        mapPane.classList.remove("hidden");
+        mBtn.classList.add("bg-emerald-500", "text-slate-950");
+        mBtn.classList.remove("text-slate-400");
+        lBtn.classList.remove("bg-emerald-500", "text-slate-950");
+        lBtn.classList.add("text-slate-400");
+        if (mapInstance) setTimeout(() => mapInstance.invalidateSize(), 100);
+      } else {
+        listPane.classList.remove("hidden");
+        mapPane.classList.add("hidden", "lg:block");
+        lBtn.classList.add("bg-emerald-500", "text-slate-950");
+        lBtn.classList.remove("text-slate-400");
+        mBtn.classList.remove("bg-emerald-500", "text-slate-950");
+        mBtn.classList.add("text-slate-400");
+      }
     };
 
     window.applyFilters = () => {
-      visibleCount = 36;
+      visibleCount = 30;
       const city = document.getElementById("cityFilter").value;
       const q = document.getElementById("searchInput").value.toLowerCase().trim();
       const service = document.getElementById("serviceFilter").value;
@@ -265,31 +637,41 @@
 
       currentFiltered = allListings.filter(item => {
         if (city !== "all" && item.city !== city) return false;
-
         if (q) {
-          const nameMatch = (item.name || "").toLowerCase().includes(q);
-          const addrMatch = (item.address || "").toLowerCase().includes(q);
-          const cuisineMatch = (item.tags?.cuisine || []).some(c => c.toLowerCase().includes(q));
-          if (!nameMatch && !addrMatch && !cuisineMatch) return false;
+          const n = (item.name || "").toLowerCase().includes(q);
+          const a = (item.address || "").toLowerCase().includes(q);
+          const c = (item.tags?.cuisine || []).some(x => x.toLowerCase().includes(q));
+          if (!n && !a && !c) return false;
         }
-
         if (service !== "all" && !(item.tags?.services || []).includes(service)) return false;
         if (category !== "all" && !(item.tags?.cuisine || []).includes(category)) return false;
 
         const tier = item.tier || "free";
-        if (filterPartnersOnly && tier === "free") return false;
+        if (filters.partners && tier === "free") return false;
+        if (filters.specials && !item.specialOffer) return false;
+        if (filters.openNow && !checkOpenStatus(item.openingHours).isOpen) return false;
 
         return true;
       });
+
+      if (userCoords) {
+        currentFiltered.forEach(item => {
+          item._dist = (typeof item.lat === "number" && typeof item.lng === "number")
+            ? haversineKm(userCoords.lat, userCoords.lng, item.lat, item.lng)
+            : 9999;
+        });
+        currentFiltered.sort((a, b) => a._dist - b._dist);
+      }
 
       document.getElementById("resultCount").textContent =
         `Showing ${Math.min(visibleCount, currentFiltered.length).toLocaleString()} of ${currentFiltered.length.toLocaleString()} eateries`;
 
       renderCards();
+      updateMapPins(currentFiltered, city);
     };
 
     window.loadMore = () => {
-      visibleCount += 36;
+      visibleCount += 30;
       document.getElementById("resultCount").textContent =
         `Showing ${Math.min(visibleCount, currentFiltered.length).toLocaleString()} of ${currentFiltered.length.toLocaleString()} eateries`;
       renderCards();
@@ -318,87 +700,254 @@
         const cuisines = (item.tags?.cuisine || []).slice(0, 3);
         const services = item.tags?.services || [];
         const cleanPhone = (item.phone || "").replace(/\s+/g, "");
+        const openStatus = checkOpenStatus(item.openingHours);
+        const gradient = getBannerGradient(cuisines);
 
-        let badgeHtml = '<span class="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-500">Free</span>';
+        let badgeHtml = '<span class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-950/70 text-slate-400 border border-slate-700/70">Free</span>';
         let borderClass = 'border-slate-800';
         if (isPro) {
-          badgeHtml = '<span class="shrink-0 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">★ Featured Pro</span>';
+          badgeHtml = '<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500 text-slate-950 shadow-sm">★ Featured Pro</span>';
           borderClass = 'border-amber-500/50 shadow-lg shadow-amber-500/5';
         } else if (isStarter) {
-          badgeHtml = '<span class="shrink-0 text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30">✓ Verified</span>';
-          borderClass = 'border-sky-500/30';
+          badgeHtml = '<span class="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/40">✓ Verified</span>';
+          borderClass = 'border-sky-500/35';
         }
+
+        const openPill = openStatus.known
+          ? `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-full ${openStatus.isOpen ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'}">● ${openStatus.label}</span>`
+          : '';
 
         let actionsHtml = "";
         if (isPro) {
           actionsHtml = `
             ${item.directOrderUrl ? `
               <a href="${item.directOrderUrl.startsWith('http') ? item.directOrderUrl : 'https://' + item.directOrderUrl}"
-                target="_blank" rel="noopener"
-                class="flex-1 text-center bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs py-2.5 px-3 rounded-xl transition">
-                Order / Website ↗
-              </a>
-            ` : ''}
+                target="_blank" rel="noopener" onclick="event.stopPropagation()"
+                class="flex-1 text-center bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs py-2 px-3 rounded-xl transition">
+                Order Direct ↗
+              </a>` : ''}
             ${cleanPhone ? `
-              <a href="tel:${cleanPhone}"
-                class="flex-1 text-center bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs py-2.5 px-3 rounded-xl transition">
+              <a href="tel:${cleanPhone}" onclick="event.stopPropagation()"
+                class="text-center bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs py-2 px-3 rounded-xl transition">
                 📞 Call
-              </a>
-            ` : ''}
-            <a href="${item.googleReviewUrl || '#'}" target="_blank" rel="noopener"
-              class="text-center bg-slate-800/60 hover:bg-slate-800 text-slate-300 text-xs py-2.5 px-3 rounded-xl transition">
-              Map ↗
-            </a>
+              </a>` : ''}
           `;
         } else if (isStarter) {
           actionsHtml = `
             ${cleanPhone ? `
-              <a href="tel:${cleanPhone}"
-                class="flex-1 text-center bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 font-semibold text-xs py-2.5 px-3 rounded-xl transition">
+              <a href="tel:${cleanPhone}" onclick="event.stopPropagation()"
+                class="flex-1 text-center bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 font-semibold text-xs py-2 px-3 rounded-xl transition">
                 📞 Call Direct
-              </a>
-            ` : ''}
-            <a href="${item.googleReviewUrl || '#'}" target="_blank" rel="noopener"
-              class="flex-1 text-center bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-2.5 px-3 rounded-xl transition">
+              </a>` : ''}
+            <a href="${item.googleReviewUrl || '#'}" target="_blank" rel="noopener" onclick="event.stopPropagation()"
+              class="text-center bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-2 px-3 rounded-xl transition">
               Map ↗
             </a>
           `;
         } else {
           actionsHtml = `
-            <a href="${item.googleReviewUrl || '#'}" target="_blank" rel="noopener"
-              class="flex-1 text-center bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-2.5 px-3 rounded-xl transition">
-              View on Map ↗
+            <a href="${item.googleReviewUrl || '#'}" target="_blank" rel="noopener" onclick="event.stopPropagation()"
+              class="flex-1 text-center bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-2 px-3 rounded-xl transition">
+              Map ↗
             </a>
-            <a href="mailto:hello@eatsdirect.co.nz?subject=${encodeURIComponent('Claim Listing: ' + item.name + ' (' + (item.city || 'NZ') + ')')}"
-              class="text-center bg-slate-800/50 hover:bg-emerald-500/10 text-slate-400 hover:text-emerald-400 border border-slate-700/80 text-xs py-2.5 px-3 rounded-xl transition">
+            <button onclick="event.stopPropagation(); openClaimModal('${item.placeId}')"
+              class="text-center bg-slate-800/60 hover:bg-emerald-500/15 text-slate-300 hover:text-emerald-400 border border-slate-700 text-xs font-medium py-2 px-3 rounded-xl transition">
               Claim Listing
-            </a>
+            </button>
           `;
         }
 
         return `
-          <article class="bg-slate-900 border ${borderClass} rounded-2xl p-5 flex flex-col justify-between hover:border-slate-700 transition">
+          <article onclick="openDetailById('${item.placeId}')"
+            class="cursor-pointer bg-slate-900 border ${borderClass} rounded-2xl overflow-hidden flex flex-col justify-between hover:border-slate-600 transition group">
             <div>
-              <div class="flex items-start justify-between gap-2 mb-2">
-                <h2 class="text-lg font-bold text-white leading-snug">${item.name}</h2>
-                ${badgeHtml}
+              <!-- Card Visual Header -->
+              <div class="h-24 bg-gradient-to-br ${gradient} p-3.5 flex flex-col justify-between relative border-b border-slate-800/60"
+                style="${item.coverImageUrl ? `background-image: linear-gradient(to top, rgba(15,23,42,0.92), rgba(15,23,42,0.35)), url('${item.coverImageUrl}'); background-size: cover; background-position: center;` : ''}">
+                <div class="flex items-center justify-between gap-2">
+                  ${badgeHtml}
+                  ${openPill}
+                </div>
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-[11px] font-medium text-slate-300 truncate">${item.city || "New Zealand"}</span>
+                  ${item._dist && item._dist < 500 ? `<span class="text-[11px] font-semibold text-emerald-400">${item._dist.toFixed(1)} km</span>` : ''}
+                </div>
               </div>
 
-              <p class="text-xs text-slate-400 mb-3">📍 ${item.address || item.city || "New Zealand"}</p>
+              <!-- Card Body -->
+              <div class="p-4">
+                ${item.specialOffer ? `
+                  <div class="mb-2 text-[11px] font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/25 px-2.5 py-1 rounded-lg truncate">
+                    🔥 ${item.specialOffer}
+                  </div>` : ''}
 
-              <div class="flex flex-wrap gap-1.5 mb-4">
-                ${cuisines.map(c => `<span class="text-[11px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300">${c}</span>`).join("")}
-                ${services.map(s => `<span class="text-[11px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400">${s}</span>`).join("")}
+                <h2 class="text-base font-bold text-white group-hover:text-emerald-400 transition leading-snug mb-1">${item.name}</h2>
+                <p class="text-xs text-slate-400 truncate mb-2">📍 ${item.address || item.city}</p>
+                <p class="text-[11px] text-slate-400 truncate mb-3">🕒 ${item.openingHours || "Hours not listed"}</p>
+
+                <div class="flex flex-wrap gap-1">
+                  ${cuisines.map(c => `<span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300">${c}</span>`).join("")}
+                  ${services.map(s => `<span class="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400">${s}</span>`).join("")}
+                </div>
               </div>
             </div>
 
-            <div class="pt-3 border-t border-slate-800/80 flex flex-wrap gap-2">
+            <div class="px-4 pb-4 pt-2 flex items-center gap-2">
               ${actionsHtml}
             </div>
           </article>
         `;
       }).join("");
     }
+
+    // Slide-Over Detail Drawer
+    window.openDetailById = (placeId) => {
+      const item = allListings.find(x => x.placeId === placeId);
+      if (!item) return;
+
+      const tier = item.tier || "free";
+      const isPro = tier === "pro";
+      const isStarter = tier === "starter";
+      const openStatus = checkOpenStatus(item.openingHours);
+      const cleanPhone = (item.phone || "").replace(/\s+/g, "");
+
+      document.getElementById("drawerName").textContent = item.name;
+      document.getElementById("drawerCity").textContent = `${item.city || "New Zealand"}${item.region ? " • " + item.region : ""}`;
+      document.getElementById("drawerAddress").textContent = item.address || item.city || "New Zealand";
+      document.getElementById("drawerHours").textContent = item.openingHours || "Opening hours not yet verified";
+
+      const openBadge = document.getElementById("drawerOpenBadge");
+      if (openStatus.known) {
+        openBadge.textContent = `● ${openStatus.label}`;
+        openBadge.className = `font-semibold text-xs ${openStatus.isOpen ? "text-emerald-400" : "text-rose-400"}`;
+      } else {
+        openBadge.textContent = "Opening Hours";
+        openBadge.className = "font-semibold text-xs text-slate-200";
+      }
+
+      const tierBadge = document.getElementById("drawerTierBadge");
+      tierBadge.innerHTML = isPro
+        ? '<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-500 text-slate-950">★ Featured Pro</span>'
+        : isStarter
+        ? '<span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/40">✓ Verified Partner</span>'
+        : '<span class="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-400">Unclaimed Free Listing</span>';
+
+      const specBox = document.getElementById("drawerSpecialBox");
+      if (item.specialOffer) {
+        specBox.classList.remove("hidden");
+        document.getElementById("drawerSpecialText").textContent = item.specialOffer;
+      } else {
+        specBox.classList.add("hidden");
+      }
+
+      const distRow = document.getElementById("drawerDistanceRow");
+      if (item._dist && item._dist < 500) {
+        distRow.classList.remove("hidden");
+        distRow.classList.add("flex");
+        document.getElementById("drawerDistance").textContent = `${item._dist.toFixed(1)} km from your current location`;
+      } else {
+        distRow.classList.add("hidden");
+      }
+
+      const tagsHtml = [
+        ...(item.tags?.cuisine || []).map(c => `<span class="text-xs px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200">${c}</span>`),
+        ...(item.tags?.services || []).map(s => `<span class="text-xs px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300">${s}</span>`)
+      ].join("");
+      document.getElementById("drawerTags").innerHTML = tagsHtml;
+
+      let act = "";
+      if (isPro && item.directOrderUrl) {
+        act += `<a href="${item.directOrderUrl.startsWith('http') ? item.directOrderUrl : 'https://' + item.directOrderUrl}" target="_blank" rel="noopener"
+          class="block w-full text-center bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-xl transition">
+          Order Direct / Visit Website ↗
+        </a>`;
+      }
+      if ((isPro || isStarter) && cleanPhone) {
+        act += `<a href="tel:${cleanPhone}"
+          class="block w-full text-center bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 font-semibold py-2.5 rounded-xl transition">
+          📞 Call ${item.phone}
+        </a>`;
+      }
+      act += `<a href="${item.googleReviewUrl || '#'}" target="_blank" rel="noopener"
+        class="block w-full text-center bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2.5 rounded-xl transition">
+        Open in Google Maps ↗
+      </a>`;
+      if (tier === "free") {
+        act += `<button onclick="closeDetailDrawer(); openClaimModal('${item.placeId}')"
+          class="block w-full text-center bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold py-2.5 rounded-xl transition">
+          Own this business? Claim Listing →
+        </button>`;
+      }
+      document.getElementById("drawerActions").innerHTML = act;
+
+      document.getElementById("detailDrawer").classList.remove("hidden");
+    };
+
+    window.closeDetailDrawer = () => {
+      document.getElementById("detailDrawer").classList.add("hidden");
+    };
+
+    // Claim Listing Modal Logic
+    window.openClaimModal = (placeId = "") => {
+      const modal = document.getElementById("claimModal");
+      const fb = document.getElementById("claimFeedback");
+      fb.classList.add("hidden");
+      document.getElementById("claimForm").reset();
+
+      if (placeId) {
+        const item = allListings.find(x => x.placeId === placeId);
+        document.getElementById("claimModalTitle").textContent = `Claim: ${item?.name || "Business"}`;
+        document.getElementById("cPlaceId").value = placeId;
+        document.getElementById("cBizName").value = item?.name || "";
+        document.getElementById("cCity").value = item?.city || "Palmerston North";
+      } else {
+        document.getElementById("claimModalTitle").textContent = "Add or Claim Your Business";
+        document.getElementById("cPlaceId").value = `new_claim_${Date.now()}`;
+        document.getElementById("cCity").value = document.getElementById("cityFilter").value !== "all"
+          ? document.getElementById("cityFilter").value : "Palmerston North";
+      }
+
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    };
+
+    window.closeClaimModal = () => {
+      const modal = document.getElementById("claimModal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    };
+
+    window.submitClaim = async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("claimSubmitBtn");
+      const fb = document.getElementById("claimFeedback");
+      btn.disabled = true;
+      btn.textContent = "Submitting...";
+
+      try {
+        await addDoc(collection(db, "claim_requests"), {
+          placeId: document.getElementById("cPlaceId").value.trim(),
+          businessName: document.getElementById("cBizName").value.trim(),
+          city: document.getElementById("cCity").value.trim(),
+          ownerName: document.getElementById("cOwnerName").value.trim(),
+          ownerPhone: document.getElementById("cOwnerPhone").value.trim(),
+          ownerEmail: document.getElementById("cOwnerEmail").value.trim(),
+          requestedTier: document.getElementById("cTier").value,
+          websiteUrl: document.getElementById("cWebsite").value.trim(),
+          status: "pending",
+          createdAt: serverTimestamp()
+        });
+
+        fb.textContent = "✓ Claim request received! Our team will verify your business details within 24 hours.";
+        fb.classList.remove("hidden");
+        setTimeout(() => window.closeClaimModal(), 2500);
+      } catch (err) {
+        alert("Failed to submit claim: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Submit Claim Request";
+      }
+    };
 
     init();
   </script>
