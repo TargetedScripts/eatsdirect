@@ -131,7 +131,7 @@
     </section>
   </div>
 
-  <!-- Add / Edit Modal -->
+  <!-- Add / Edit Modal (DILENGKAPI KOLOM LATITUDE & LONGITUDE) -->
   <div id="editModal" class="fixed inset-0 bg-black/75 hidden items-center justify-center z-50 p-4 overflow-y-auto">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-lg w-full space-y-4">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -167,6 +167,21 @@
           <input id="fAddress" type="text" placeholder="e.g., 317 Main Street, Palmerston North Central"
             class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white" />
         </div>
+
+        <!-- Kolom Koordinat Peta (Latitude & Longitude) -->
+        <div class="grid grid-cols-2 gap-3 bg-slate-950/40 p-3 rounded-xl border border-slate-800">
+          <div>
+            <label class="block text-emerald-400 text-xs font-semibold mb-1">Latitude (Lat) *</label>
+            <input id="fLat" type="number" step="any" placeholder="-40.3523"
+              class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs font-mono" />
+          </div>
+          <div>
+            <label class="block text-emerald-400 text-xs font-semibold mb-1">Longitude (Lng) *</label>
+            <input id="fLng" type="number" step="any" placeholder="175.6082"
+              class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs font-mono" />
+          </div>
+        </div>
+
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-slate-400 text-xs mb-1">Phone (Starter &amp; Pro)</label>
@@ -337,7 +352,6 @@
     window.approveClaim = async (reqId, placeId, tier) => {
       if (!confirm(`Approve claim and update listing [${placeId}] to tier: ${tier.toUpperCase()}?`)) return;
       try {
-        // Update directory_listings tier
         const base = mergedListings.find(x => x.id === placeId) || { placeId, name: "Claimed Business" };
         await setDoc(doc(db, "directory_listings", placeId), {
           ...base,
@@ -347,7 +361,6 @@
           subscriptionStatus: 'active'
         }, { merge: true });
 
-        // Delete claim request record
         await deleteDoc(doc(db, "claim_requests", reqId));
 
         localStorage.removeItem("eatsdirect_nz_cache_v3");
@@ -464,6 +477,8 @@
         document.getElementById("fName").value = item.name || "";
         document.getElementById("fCity").value = item.city || "Palmerston North";
         document.getElementById("fAddress").value = item.address || "";
+        document.getElementById("fLat").value = item.lat !== undefined ? item.lat : -40.3523;
+        document.getElementById("fLng").value = item.lng !== undefined ? item.lng : 175.6082;
         document.getElementById("fPhone").value = item.phone || "";
         document.getElementById("fTier").value = item.tier || "free";
         document.getElementById("fWebsite").value = item.directOrderUrl || "";
@@ -478,6 +493,8 @@
         document.getElementById("fName").value = "";
         document.getElementById("fCity").value = "Palmerston North";
         document.getElementById("fAddress").value = "";
+        document.getElementById("fLat").value = -40.3523;
+        document.getElementById("fLng").value = 175.6082;
         document.getElementById("fPhone").value = "";
         document.getElementById("fTier").value = "free";
         document.getElementById("fWebsite").value = "";
@@ -498,6 +515,9 @@
       const name = document.getElementById("fName").value.trim();
       const city = document.getElementById("fCity").value.trim() || "Palmerston North";
       const address = document.getElementById("fAddress").value.trim();
+      const latVal = parseFloat(document.getElementById("fLat").value);
+      const lngVal = parseFloat(document.getElementById("fLng").value);
+
       if (!name || !address) {
         alert("Business Name and Street Address are required.");
         return;
@@ -515,11 +535,16 @@
       const cuisine = document.getElementById("fCuisine").value
         .split(",").map(s => s.trim()).filter(Boolean);
 
+      const baseItem = mergedListings.find(x => x.id === docId) || {};
+
       const payload = {
+        ...baseItem,
         placeId: docId,
         name,
         city,
         address,
+        lat: isNaN(latVal) ? -40.3523 : latVal,
+        lng: isNaN(lngVal) ? 175.6082 : lngVal,
         phone: document.getElementById("fPhone").value.trim(),
         tier: selectedTier,
         isClaimed: selectedTier !== "free",
@@ -537,6 +562,7 @@
       localStorage.removeItem("eatsdirect_nz_cache_v3");
       window.closeModal();
       await loadAllData();
+      alert("Listing saved successfully with GPS coordinates!");
     };
 
     window.hideListing = async (id, name) => {
