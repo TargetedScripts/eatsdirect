@@ -323,15 +323,11 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Official Stripe Payment Links (Test Mode / Sandbox)
     const STRIPE_PAYMENT_LINKS = {
       starter_monthly: "https://buy.stripe.com/test_8x228r7ZbfpF2Dl4nodwc00"
-      // starter_yearly: "...",
-      // pro_monthly: "...",
-      // pro_yearly: "..."
     };
 
-    const CACHE_KEY = "eatsdirect_nz_cache_v3";
+    const CACHE_KEY = "eatsdirect_nz_cache_v4"; // Diperbarui untuk memaksa refresh cache
     const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
     const NZ_CITY_COORDS = {
@@ -481,7 +477,6 @@
       const combinedMap = new Map();
       const staticByNameCity = new Map();
 
-      // Indeks data statis berdasarkan ID dan Nama+Kota
       staticData.forEach(item => {
         const id = item.placeId || item.id || (item.name + '_' + (item.city || '')).toLowerCase().replace(/[^a-z0-9]/g, '_');
         item.placeId = id;
@@ -491,7 +486,6 @@
         staticByNameCity.set(ncKey, id);
       });
 
-      // Gabungkan Firestore Overrides dengan pencocokan cerdas
       overridesMap.forEach((val, key) => {
         let targetKey = key;
         if (!combinedMap.has(key) && (val.businessName || val.name) && val.city) {
@@ -526,7 +520,7 @@
       markersLayer = L.layerGroup().addTo(mapInstance);
     }
 
-    // --- MAP PINS UPDATER (Hanya Menampilkan Mitra Starter & Pro) ---
+    // --- MAP PINS UPDATER (Fixed Leaflet single-point fitBounds & parseFloat safety) ---
     function updateMapPins(items, city) {
       if (!mapInstance || !markersLayer) return;
       markersLayer.clearLayers();
@@ -565,7 +559,10 @@
         }
       });
 
-      if (validCoords.length > 0) {
+      // Perbaikan: Jika hanya ada 1 titik koordinat, gunakan setView agar tidak error
+      if (validCoords.length === 1) {
+        mapInstance.setView(validCoords[0], 15);
+      } else if (validCoords.length > 1) {
         mapInstance.fitBounds(validCoords, { padding: [30, 30], maxZoom: 14 });
       } else if (NZ_CITY_COORDS[city]) {
         mapInstance.setView(NZ_CITY_COORDS[city], 13);
