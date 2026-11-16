@@ -131,7 +131,7 @@
     </section>
   </div>
 
-  <!-- Add / Edit Modal (DILENGKAPI KOLOM LATITUDE & LONGITUDE) -->
+  <!-- Add / Edit Modal -->
   <div id="editModal" class="fixed inset-0 bg-black/75 hidden items-center justify-center z-50 p-4 overflow-y-auto">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-lg w-full space-y-4">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -363,7 +363,7 @@
 
         await deleteDoc(doc(db, "claim_requests", reqId));
 
-        localStorage.removeItem("eatsdirect_nz_cache_v3");
+        localStorage.removeItem("eatsdirect_nz_cache_v4"); // DIPERBAIKI MENJADI v4
         alert("Claim approved & listing updated successfully!");
         loadAllData();
         loadClaimRequests();
@@ -461,7 +461,7 @@
         isClaimed: newTier !== "free",
         isManualEdited: true
       }, { merge: true });
-      localStorage.removeItem("eatsdirect_nz_cache_v3");
+      localStorage.removeItem("eatsdirect_nz_cache_v4"); // DIPERBAIKI MENJADI v4
       await loadAllData();
     };
 
@@ -559,7 +559,7 @@
       };
 
       await setDoc(doc(db, "directory_listings", docId), payload, { merge: true });
-      localStorage.removeItem("eatsdirect_nz_cache_v3");
+      localStorage.removeItem("eatsdirect_nz_cache_v4"); // DIPERBAIKI MENJADI v4
       window.closeModal();
       await loadAllData();
       alert("Listing saved successfully with GPS coordinates!");
@@ -569,7 +569,7 @@
       if (!confirm(`Hide "${name}" from public directory?`)) return;
       const base = mergedListings.find(x => x.id === id) || { placeId: id, name };
       await setDoc(doc(db, "directory_listings", id), { ...base, permanentlyClosed: true, isManualEdited: true }, { merge: true });
-      localStorage.removeItem("eatsdirect_nz_cache_v3");
+      localStorage.removeItem("eatsdirect_nz_cache_v4"); // DIPERBAIKI MENJADI v4
       await loadAllData();
     };
 
