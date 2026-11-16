@@ -479,13 +479,34 @@
       }
 
       const combinedMap = new Map();
-      staticData.forEach(item => combinedMap.set(item.placeId || item.id, item));
-      overridesMap.forEach((val, key) => {
-        const base = combinedMap.get(key) || {};
-        combinedMap.set(key, { ...base, ...val, placeId: key });
+      const staticByNameCity = new Map();
+
+      // Indeks data statis berdasarkan ID dan Nama+Kota
+      staticData.forEach(item => {
+        const id = item.placeId || item.id || (item.name + '_' + (item.city || '')).toLowerCase().replace(/[^a-z0-9]/g, '_');
+        item.placeId = id;
+        combinedMap.set(id, { ...item });
+        
+        const ncKey = `${(item.name || '').toLowerCase().trim()}_${(item.city || '').toLowerCase().trim()}`;
+        staticByNameCity.set(ncKey, id);
       });
 
-      const finalData = Array.from(combinedMap.values()).filter(x => !x.permanentlyClosed);
+      // Gabungkan Firestore Overrides dengan pencocokan cerdas
+      overridesMap.forEach((val, key) => {
+        let targetKey = key;
+        if (!combinedMap.has(key) && (val.businessName || val.name) && val.city) {
+          const bizName = (val.businessName || val.name).toLowerCase().trim();
+          const bizCity = val.city.toLowerCase().trim();
+          const ncKey = `${bizName}_${bizCity}`;
+          if (staticByNameCity.has(ncKey)) {
+            targetKey = staticByNameCity.get(ncKey);
+          }
+        }
+        const base = combinedMap.get(targetKey) || {};
+        combinedMap.set(targetKey, { ...base, ...val, placeId: targetKey });
+      });
+
+      const finalData = Array.from(combinedMap.values()).filter(x => x.permanentlyClosed !== true);
       if (staticData.length > 100) {
         try {
           localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: finalData }));
@@ -505,12 +526,11 @@
       markersLayer = L.layerGroup().addTo(mapInstance);
     }
 
-    // --- MAP PINS UPDATER (Fixed with parseFloat for safe string/number handling) ---
+    // --- MAP PINS UPDATER (Hanya Menampilkan Mitra Starter & Pro) ---
     function updateMapPins(items, city) {
       if (!mapInstance || !markersLayer) return;
       markersLayer.clearLayers();
 
-      // Filter ketat: Hanya tampilkan restoran berstatus 'starter' atau 'pro' di peta
       const paidItems = items.filter(item => {
         const tier = (item.tier || "free").toLowerCase();
         return tier === "starter" || tier === "pro";
